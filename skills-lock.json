@@ -19,6 +19,12 @@
       "skillPath": "skills/monitor-ci/SKILL.md",
       "computedHash": "bb161929e02b2b401987e33b250659523ca715d2f9f32ccacf4d3eb872f1db2d"
     },
+    "nextjs": {
+      "source": "vercel-labs/vercel-plugin",
+      "sourceType": "github",
+      "skillPath": "skills/nextjs/SKILL.md",
+      "computedHash": "d3a48eada4dbae95856d643a0c9c54a38974ee7896a4d34f93aead13d26c343a"
+    },
     "nx-generate": {
       "source": "nrwl/nx-ai-agents-config",
       "sourceType": "github",
