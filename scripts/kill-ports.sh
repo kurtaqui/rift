@@ -3,7 +3,7 @@
 #   3000–3002  shell + MFEs (vike dev/preview servers)
 #   3100–3104  api (Hono)
 
-RANGES=("3000-3002" "3100-3102" )
+RANGES=("3000-3002" "3011-3012" "3100-3102" )
 
 killed=0
 ports=()

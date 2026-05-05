@@ -14,6 +14,7 @@
     "@rift/champion": "workspace:^",
     "@rift/data-access": "workspace:^",
     "@rift/mfe-champions": "workspace:*",
+    "@rift/mfe-fragment": "workspace:^",
     "@rift/mfe-player": "workspace:*",
     "@rift/mfe-tier-list": "workspace:*",
     "@rift/styles": "workspace:*",

@@ -12,8 +12,16 @@ import type { Data } from "./data";
 const TIER_ORDER = ["S", "A", "B", "C", "D"] as const;
 const EMPTY_ENTRIES: never[] = [];
 
-export default function Page() {
-	const { entries, patches } = useData<Data>();
+export default function Page({ data: dataProp }: { data?: unknown }) {
+	const hookData = useData<Data>();
+	// dataProp is typed `unknown` at the MFE boundary. If it's a non-null object,
+	// treat it as the expected Data shape (passed from App.tsx or MfeSlot).
+	const resolved: Data =
+		dataProp !== undefined && dataProp !== null && typeof dataProp === "object"
+			? // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- object-guard above makes this safe
+				(dataProp as unknown as Data)
+			: hookData;
+	const { entries, patches } = resolved;
 
 	const tierFilter = useAtomValue(tierAtom);
 	const roleFilter = useAtomValue(roleAtom);

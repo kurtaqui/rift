@@ -3,8 +3,18 @@ import { useData } from "vike-react/useData";
 
 import type { Data } from "./data";
 
-export default function Page() {
-	const { champions } = useData<Data>();
+export default function Page({ data: dataProp }: { data?: unknown }) {
+	const hookData = useData<Data>();
+	// dataProp is typed `unknown` at the MFE boundary. If it's a non-null object,
+	// treat it as the expected Data shape (passed from App.tsx or MfeSlot).
+	const resolved: Data =
+		dataProp !== undefined && dataProp !== null && typeof dataProp === "object"
+			? // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- object-guard above makes this safe
+				(dataProp as unknown as Data)
+			: hookData;
+	const { champions } = resolved;
+
+	console.warn(">>>> champion list loaded");
 
 	return (
 		<div>

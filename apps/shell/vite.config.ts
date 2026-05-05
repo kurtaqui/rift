@@ -17,66 +17,11 @@ import { defineConfig } from "vite";
 const MFE_CHAMPIONS_URL = process.env.MFE_CHAMPIONS_URL ?? "/static-assets/mfes/mfe-champions";
 const MFE_TIER_LIST_URL = process.env.MFE_TIER_LIST_URL ?? "/static-assets/mfes/mfe-tier-list";
 
-/**
- * Bare-name → workspace source map for MFE pages, used by SSR (and dev
- * fallback). The client production build lets `@module-federation/vite`
- * intercept these specifiers via `loadRemote(...)` instead — see the
- * federation plugin block below and `mfeBareNameAliasPlugin`.
- */
-const MFE_BARE_NAME_TARGETS: Record<string, string> = {
-	"mfe-champions/pages/champions-list": path.resolve(
-		__dirname,
-		"../../mfe/mfe-champions/src/pages/champions-list/Page.tsx",
-	),
-	"mfe-champions/pages/champions-list/data": path.resolve(
-		__dirname,
-		"../../mfe/mfe-champions/src/pages/champions-list/data.ts",
-	),
-	"mfe-champions/pages/champion-detail": path.resolve(
-		__dirname,
-		"../../mfe/mfe-champions/src/pages/champion-detail/Page.tsx",
-	),
-	"mfe-champions/pages/champion-detail/data": path.resolve(
-		__dirname,
-		"../../mfe/mfe-champions/src/pages/champion-detail/data.ts",
-	),
-	"mfe-tier-list/pages/tier-list": path.resolve(__dirname, "../../mfe/mfe-tier-list/src/pages/tier-list/Page.tsx"),
-	"mfe-tier-list/pages/tier-list/data": path.resolve(__dirname, "../../mfe/mfe-tier-list/src/pages/tier-list/data.ts"),
-};
-
-/**
- * D-A.5 — resolves the bare-name MFE specifiers (e.g.
- * `mfe-champions/pages/champions-list`) used by the shell's `+Page.tsx`
- * and `+data.ts` files.
- *
- * Active everywhere **except the client production build**, where the
- * federation host plugin owns these specifiers and rewrites them into
- * `loadRemote(...)` calls. In dev (`vite dev`) and in the SSR build the
- * federation plugin is disabled, so the alias must apply on every
- * environment — otherwise the client dev graph has no resolver for the
- * bare names and Vike's page-entry virtual module fails to load.
- *
- * Vike uses Vite's environments API which defeats `isSsrBuild`, so we
- * gate the disable via `applyToEnvironment` + `command` here and on the
- * federation plugin below.
- */
-function makeMfeBareNameAliasPlugin(command: "serve" | "build") {
-	return {
-		name: "rift:mfe-bare-name-alias",
-		enforce: "pre" as const,
-		applyToEnvironment: (env: { name: string }) => command !== "build" || env.name !== "client",
-		resolveId(source: string) {
-			return MFE_BARE_NAME_TARGETS[source];
-		},
-	};
-}
-
 export default defineConfig(({ command }) => ({
 	plugins: [
 		vike(),
 		react(),
 		tailwindcss(),
-		makeMfeBareNameAliasPlugin(command),
 		// Compile-time SSR for the Stencil player MFE. The plugin intercepts JSX
 		// that references components from `@rift/mfe-player/react`, calls the
 		// hydrate module, and replaces them with pre-rendered Declarative
@@ -87,20 +32,11 @@ export default defineConfig(({ command }) => ({
 			hydrateModule: import("@rift/mfe-player/hydrate"),
 			serializeShadowRoot: { default: "declarative-shadow-dom" },
 		}),
-		// Federation host registration is **client-build only** (D-A.5):
-		// - In dev (`vite dev`), the plugin is off; bare-name imports like
-		//   `import("mfe-champions/pages/...")` resolve via the
-		//   `mfe-champions` aliases below to the MFE source tree, so HMR
-		//   works without the MFE static host running.
-		// - In the SSR build, the plugin is also off (so SSR keeps using the
-		//   workspace source via the same aliases). This avoids loading MF
-		//   runtime on the server and keeps Vike's `+data` / `+title` hooks
-		//   server-rendered against the MFE module directly.
-		// - Only in the **client** production build do bare-name imports get
-		//   rewritten into `loadRemote(...)` calls that fetch the chunk from
-		//   the remote's `mf-manifest.json` at runtime.
-		// Loading the plugin in dev or SSR breaks Vike ("Default export from
-		// undefined must include a { fetch() } function").
+		// Federation host registration is **client-build only**.
+		// MFE SSR is now handled by runtime HTTP fragment composition
+		// (fetchMfeFragment → MFE fragment servers) so the bare-name alias
+		// plugin is no longer needed and the federation plugin is only
+		// required to wire up client-side Module Federation remotes.
 		//
 		// Vike uses Vite's environments API and runs the SSR + client builds
 		// from a single `vite build` invocation, so `isSsrBuild` is not a
@@ -188,6 +124,30 @@ export default defineConfig(({ command }) => ({
 			{
 				find: "@rift/mfe-player",
 				replacement: path.resolve(__dirname, "../../mfe/mfe-player/dist/index.js"),
+			},
+			{
+				find: "@rift/mfe-fragment/renderer",
+				replacement: path.resolve(__dirname, "../../libs/mfe-fragment/src/renderer.ts"),
+			},
+			{
+				find: "@rift/mfe-fragment/server",
+				replacement: path.resolve(__dirname, "../../libs/mfe-fragment/src/server.ts"),
+			},
+			{
+				find: "@rift/mfe-fragment/client",
+				replacement: path.resolve(__dirname, "../../libs/mfe-fragment/src/client.tsx"),
+			},
+			// Dev-mode direct imports for MFE Apps — used by shell +Page.tsx files
+			// as `devLoader` props so client-side React mounts without MF runtime.
+			// These aliases are only active during `vite dev` (the federation plugin
+			// that provides `loadRemote` is gated to `command === "build"`).
+			{
+				find: "~mfe/champions",
+				replacement: path.resolve(__dirname, "../../mfe/mfe-champions/src/App.tsx"),
+			},
+			{
+				find: "~mfe/tier-list",
+				replacement: path.resolve(__dirname, "../../mfe/mfe-tier-list/src/App.tsx"),
 			},
 			{ find: "@rift/champion", replacement: path.resolve(__dirname, "../../libs/champion/src/index.ts") },
 			{ find: "@rift/data-access", replacement: path.resolve(__dirname, "../../libs/data-access/src/index.ts") },

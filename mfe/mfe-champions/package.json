@@ -6,12 +6,14 @@
   ],
   "type": "module",
   "exports": {
+    "./app": "./src/App.tsx",
     "./pages/champions-list": "./src/pages/champions-list/Page.tsx",
     "./pages/champions-list/data": "./src/pages/champions-list/data.ts",
     "./pages/champion-detail": "./src/pages/champion-detail/Page.tsx",
     "./pages/champion-detail/data": "./src/pages/champion-detail/data.ts"
   },
   "scripts": {
+    "dev": "vike dev",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "oxlint --type-aware ."
@@ -19,9 +21,14 @@
   "dependencies": {
     "@rift/champion": "workspace:^",
     "@rift/data-access": "workspace:^",
+    "@rift/mfe-fragment": "workspace:^",
     "@rift/ui": "workspace:^",
+    "@vikejs/hono": "catalog:",
+    "dotenv": "catalog:",
+    "hono": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-router-dom": "catalog:",
     "vike": "catalog:",
     "vike-react": "catalog:"
   },

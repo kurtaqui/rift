@@ -6,10 +6,12 @@
   ],
   "type": "module",
   "exports": {
+    "./app": "./src/App.tsx",
     "./pages/tier-list": "./src/pages/tier-list/Page.tsx",
     "./pages/tier-list/data": "./src/pages/tier-list/data.ts"
   },
   "scripts": {
+    "dev": "vike dev",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "oxlint --type-aware ."
@@ -17,7 +19,11 @@
   "dependencies": {
     "@rift/champion": "workspace:^",
     "@rift/data-access": "workspace:^",
+    "@rift/mfe-fragment": "workspace:^",
     "@rift/ui": "workspace:^",
+    "@vikejs/hono": "catalog:",
+    "dotenv": "catalog:",
+    "hono": "catalog:",
     "jotai": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

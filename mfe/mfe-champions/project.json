@@ -5,6 +5,13 @@
   "sourceRoot": "mfe/mfe-champions/src",
   "tags": ["type:lib", "scope:champions"],
   "targets": {
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm vike dev",
+        "cwd": "mfe/mfe-champions"
+      }
+    },
     "build": {
       "executor": "nx:run-commands",
       "options": {

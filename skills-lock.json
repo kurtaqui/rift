@@ -13,6 +13,12 @@
       "skillPath": "skills/link-workspace-packages/SKILL.md",
       "computedHash": "7037799a47b8599f38ce66a0b9dfa53e810bb9003bcd8d90eba99b8c4fd3387b"
     },
+    "mf": {
+      "source": "module-federation/core",
+      "sourceType": "github",
+      "skillPath": "skills/mf/SKILL.md",
+      "computedHash": "809f827f551971d6fd8df6803b57ac3091f640bcaed7c26d38c4fbe9fb78c27c"
+    },
     "monitor-ci": {
       "source": "nrwl/nx-ai-agents-config",
       "sourceType": "github",

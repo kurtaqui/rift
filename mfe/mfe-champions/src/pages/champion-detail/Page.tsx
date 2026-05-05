@@ -12,8 +12,15 @@ const SLOT_LABEL: Record<string, string> = {
 	R: "Ultimate",
 };
 
-export default function Page() {
-	const champion = useData<Data>();
+export default function Page({ data: dataProp }: { data?: unknown }) {
+	const hookData = useData<Data>();
+	// dataProp is typed `unknown` at the MFE boundary. If it's a non-null object,
+	// treat it as the expected Data shape (passed from App.tsx or MfeSlot).
+	const champion: Data =
+		dataProp !== undefined && dataProp !== null && typeof dataProp === "object"
+			? // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- object-guard above makes this safe
+				(dataProp as unknown as Data)
+			: hookData;
 
 	const abilities = [...champion.abilities].toSorted((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
 

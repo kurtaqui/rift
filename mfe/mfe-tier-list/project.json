@@ -5,6 +5,13 @@
   "sourceRoot": "mfe/mfe-tier-list/src",
   "tags": ["type:lib", "scope:tier-list"],
   "targets": {
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm vike dev",
+        "cwd": "mfe/mfe-tier-list"
+      }
+    },
     "build": {
       "executor": "nx:run-commands",
       "options": {

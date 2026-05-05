@@ -1,0 +1,12 @@
+import { MfeSlot } from "@rift/mfe-fragment/client";
+import type { MfeFragmentData } from "@rift/mfe-fragment/client";
+import { useData } from "vike-react/useData";
+
+// In dev, load the MFE App directly via Vite alias (no MF runtime needed).
+// In prod, MfeSlot falls back to loadRemote via Module Federation.
+const devLoader = import.meta.env.DEV ? async () => import("~mfe/champions") : undefined;
+
+export default function Page(): React.JSX.Element {
+	const { mfeHtml, mfeData } = useData<MfeFragmentData>();
+	return <MfeSlot mfe="champions" mfeHtml={mfeHtml} mfeData={mfeData} devLoader={devLoader} />;
+}
