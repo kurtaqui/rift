@@ -1,15 +1,15 @@
 {
-  "name": "mfe-tier-list",
+  "name": "mfe-champions",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "apps/mfe-tier-list/src",
-  "tags": ["type:lib", "scope:tier-list"],
+  "sourceRoot": "mfe/mfe-champions/src",
+  "tags": ["type:lib", "scope:champions"],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm build",
-        "cwd": "apps/mfe-tier-list"
+        "cwd": "mfe/mfe-champions"
       },
       "outputs": ["{projectRoot}/dist"],
       "dependsOn": ["^build"]
@@ -18,7 +18,7 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm preview",
-        "cwd": "apps/mfe-tier-list"
+        "cwd": "mfe/mfe-champions"
       },
       "dependsOn": ["build"]
     },
@@ -26,21 +26,21 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm oxlint --type-aware src/",
-        "cwd": "apps/mfe-tier-list"
+        "cwd": "mfe/mfe-champions"
       }
     },
     "fmt": {
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm oxfmt src/",
-        "cwd": "apps/mfe-tier-list"
+        "cwd": "mfe/mfe-champions"
       }
     },
     "fmt:check": {
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm oxfmt --check src/",
-        "cwd": "apps/mfe-tier-list"
+        "cwd": "mfe/mfe-champions"
       }
     }
   }

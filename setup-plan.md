@@ -20,7 +20,7 @@ libs/
   storybook/       # Storybook for libs/ui components
 ```
 
-Phase 1 navigation: full page loads between apps via `<a href>`.  
+Phase 1 navigation: full page loads between apps via `<a href>`.
 Seamless SPA navigation via Module Federation is **Phase 2**.
 
 ### Performance Strategy (LCP / INP / CLS)
@@ -40,7 +40,7 @@ Seamless SPA navigation via Module Federation is **Phase 2**.
 | Module Federation | Phase 2 — apps first                                                          |
 | Storybook         | `libs/storybook` only — no `--storybook` Bati flag per app                    |
 | Libs scope        | Skeletons only (structure, tsconfig, project.json, placeholder exports)       |
-| Auth0             | `apps/shell` + `apps/mfe-player` only                                         |
+| Auth0             | `apps/shell` + `mfe/mfe-player` only                                          |
 | StencilJS role    | Design system (`libs/ui`) only — Vike handles all page apps                   |
 | Shell pages       | Owns `/` (home) and `_error`/404; delegates all feature routes to MFE remotes |
 
@@ -139,7 +139,7 @@ Seamless SPA navigation via Module Federation is **Phase 2**.
 
 ---
 
-## Phase 7 — apps/mfe-champions
+## Phase 7 — mfe/mfe-champions
 
 > Parallel with Phases 6, 8, 9.
 
@@ -149,13 +149,13 @@ Seamless SPA navigation via Module Federation is **Phase 2**.
   - `pages/+config.ts`, `pages/+Layout.tsx`
   - `pages/index/+Page.tsx` — placeholder champion list
   - `pages/champions/@id/+Page.tsx` — placeholder champion detail
-- [x] 7.4. Create `apps/mfe-champions/project.json` — tag `scope:champions`
+- [x] 7.4. Create `mfe/mfe-champions/project.json` — tag `scope:champions`
 
 **Verify**: `pnpm nx run mfe-champions:dev`; `/` and `/champions/:id` routes render
 
 ---
 
-## Phase 8 — apps/mfe-tier-list
+## Phase 8 — mfe/mfe-tier-list
 
 > Parallel with Phases 6, 7, 9.
 
@@ -165,13 +165,13 @@ Seamless SPA navigation via Module Federation is **Phase 2**.
   - `pages/+config.ts`, `pages/+Layout.tsx`
   - `pages/index/+Page.tsx` — placeholder tier list
 - [x] 8.4. `src/tier-list/tier-list.atoms.ts` — `tierAtom`, `roleAtom`, `patchAtom` (typed Jotai primitive atoms, URL-sync placeholder)
-- [x] 8.5. Create `apps/mfe-tier-list/project.json` — tag `scope:tier-list`
+- [x] 8.5. Create `mfe/mfe-tier-list/project.json` — tag `scope:tier-list`
 
 **Verify**: `pnpm nx run mfe-tier-list:dev`; filter atoms importable
 
 ---
 
-## Phase 9 — apps/mfe-player
+## Phase 9 — mfe/mfe-player
 
 > Parallel with Phases 6, 7, 8.
 
@@ -182,7 +182,7 @@ Seamless SPA navigation via Module Federation is **Phase 2**.
   - `pages/+guard.ts` — redirects to Auth0 signin when no session
   - `pages/index/+Page.tsx` — placeholder player profile
   - `pages/match-history/+Page.tsx` — placeholder match history
-- [x] 9.4. Create `apps/mfe-player/project.json` — tag `scope:player`
+- [x] 9.4. Create `mfe/mfe-player/project.json` — tag `scope:player`
 
 **Verify**: `pnpm nx run mfe-player:dev`; unauthenticated request redirects to Auth0
 
@@ -199,6 +199,7 @@ Seamless SPA navigation via Module Federation is **Phase 2**.
 - [x] 10.5. Update `AGENTS.md` — reflect `apps/shell` + 3 MFE remote structure and Phase 2 Module Federation plan
 
 **Verify**:
+
 - `pnpm nx run-many -t build` passes all projects
 - `pnpm nx run-many -t lint` passes all projects
 - `pnpm nx graph` shows: `shell/mfe-* → data-access → domain`; `mfe-* → ui`; `storybook → ui`

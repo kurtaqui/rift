@@ -1,46 +1,38 @@
 {
-  "name": "mfe-champions",
+  "name": "mfe-player",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "library",
-  "sourceRoot": "apps/mfe-champions/src",
-  "tags": ["type:lib", "scope:champions"],
+  "sourceRoot": "mfe/mfe-player/src",
+  "tags": ["type:lib", "scope:player"],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm build",
-        "cwd": "apps/mfe-champions"
+        "command": "pnpm stencil build",
+        "cwd": "mfe/mfe-player"
       },
-      "outputs": ["{projectRoot}/dist"],
+      "outputs": ["{projectRoot}/dist", "{projectRoot}/loader", "{projectRoot}/hydrate", "{projectRoot}/src/react"],
       "dependsOn": ["^build"]
-    },
-    "preview": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "pnpm preview",
-        "cwd": "apps/mfe-champions"
-      },
-      "dependsOn": ["build"]
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm oxlint --type-aware src/",
-        "cwd": "apps/mfe-champions"
+        "command": "pnpm oxlint src/",
+        "cwd": "mfe/mfe-player"
       }
     },
     "fmt": {
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm oxfmt src/",
-        "cwd": "apps/mfe-champions"
+        "cwd": "mfe/mfe-player"
       }
     },
     "fmt:check": {
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm oxfmt --check src/",
-        "cwd": "apps/mfe-champions"
+        "cwd": "mfe/mfe-player"
       }
     }
   }

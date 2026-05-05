@@ -1,0 +1,47 @@
+{
+  "name": "mfe-tier-list",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "mfe/mfe-tier-list/src",
+  "tags": ["type:lib", "scope:tier-list"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm build",
+        "cwd": "mfe/mfe-tier-list"
+      },
+      "outputs": ["{projectRoot}/dist"],
+      "dependsOn": ["^build"]
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm preview",
+        "cwd": "mfe/mfe-tier-list"
+      },
+      "dependsOn": ["build"]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm oxlint --type-aware src/",
+        "cwd": "mfe/mfe-tier-list"
+      }
+    },
+    "fmt": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm oxfmt src/",
+        "cwd": "mfe/mfe-tier-list"
+      }
+    },
+    "fmt:check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm oxfmt --check src/",
+        "cwd": "mfe/mfe-tier-list"
+      }
+    }
+  }
+}

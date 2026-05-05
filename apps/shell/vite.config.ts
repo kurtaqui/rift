@@ -24,18 +24,24 @@ const MFE_TIER_LIST_URL = process.env.MFE_TIER_LIST_URL ?? "/static-assets/mfes/
  * federation plugin block below and `mfeBareNameAliasPlugin`.
  */
 const MFE_BARE_NAME_TARGETS: Record<string, string> = {
-	"mfe-champions/pages/champions-list": path.resolve(__dirname, "../mfe-champions/src/pages/champions-list/Page.tsx"),
+	"mfe-champions/pages/champions-list": path.resolve(
+		__dirname,
+		"../../mfe/mfe-champions/src/pages/champions-list/Page.tsx",
+	),
 	"mfe-champions/pages/champions-list/data": path.resolve(
 		__dirname,
-		"../mfe-champions/src/pages/champions-list/data.ts",
+		"../../mfe/mfe-champions/src/pages/champions-list/data.ts",
 	),
-	"mfe-champions/pages/champion-detail": path.resolve(__dirname, "../mfe-champions/src/pages/champion-detail/Page.tsx"),
+	"mfe-champions/pages/champion-detail": path.resolve(
+		__dirname,
+		"../../mfe/mfe-champions/src/pages/champion-detail/Page.tsx",
+	),
 	"mfe-champions/pages/champion-detail/data": path.resolve(
 		__dirname,
-		"../mfe-champions/src/pages/champion-detail/data.ts",
+		"../../mfe/mfe-champions/src/pages/champion-detail/data.ts",
 	),
-	"mfe-tier-list/pages/tier-list": path.resolve(__dirname, "../mfe-tier-list/src/pages/tier-list/Page.tsx"),
-	"mfe-tier-list/pages/tier-list/data": path.resolve(__dirname, "../mfe-tier-list/src/pages/tier-list/data.ts"),
+	"mfe-tier-list/pages/tier-list": path.resolve(__dirname, "../../mfe/mfe-tier-list/src/pages/tier-list/Page.tsx"),
+	"mfe-tier-list/pages/tier-list/data": path.resolve(__dirname, "../../mfe/mfe-tier-list/src/pages/tier-list/data.ts"),
 };
 
 /**
@@ -165,23 +171,23 @@ export default defineConfig(({ command }) => ({
 			{ find: /^@rift\/ui$/, replacement: path.resolve(__dirname, "../../libs/ui/src/index.ts") },
 			{
 				find: "@rift/mfe-player/react",
-				replacement: path.resolve(__dirname, "../mfe-player/src/react/components.ts"),
+				replacement: path.resolve(__dirname, "../../mfe/mfe-player/src/react/components.ts"),
 			},
 			{
 				find: "@rift/mfe-player/hydrate",
-				replacement: path.resolve(__dirname, "../mfe-player/hydrate/index.mjs"),
+				replacement: path.resolve(__dirname, "../../mfe/mfe-player/hydrate/index.mjs"),
 			},
 			{
 				find: "@rift/mfe-player/loader",
-				replacement: path.resolve(__dirname, "../mfe-player/loader/index.js"),
+				replacement: path.resolve(__dirname, "../../mfe/mfe-player/loader/index.js"),
 			},
 			{
 				find: "@rift/mfe-player/dist/components",
-				replacement: path.resolve(__dirname, "../mfe-player/dist/components"),
+				replacement: path.resolve(__dirname, "../../mfe/mfe-player/dist/components"),
 			},
 			{
 				find: "@rift/mfe-player",
-				replacement: path.resolve(__dirname, "../mfe-player/dist/index.js"),
+				replacement: path.resolve(__dirname, "../../mfe/mfe-player/dist/index.js"),
 			},
 			{ find: "@rift/champion", replacement: path.resolve(__dirname, "../../libs/champion/src/index.ts") },
 			{ find: "@rift/data-access", replacement: path.resolve(__dirname, "../../libs/data-access/src/index.ts") },

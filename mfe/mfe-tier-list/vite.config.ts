@@ -5,11 +5,11 @@ import { defineConfig } from "vite";
 
 /**
  * `mfe-tier-list` is a Module Federation **remote** (Phase D-A). See
- * `apps/mfe-champions/vite.config.ts` for the architectural notes — this
+ * `mfe/mfe-champions/vite.config.ts` for the architectural notes — this
  * file is the same shape with a different `name` / `exposes`.
  */
 export default defineConfig({
-	// See `apps/mfe-champions/vite.config.ts` for the `base` rationale.
+	// See `mfe/mfe-champions/vite.config.ts` for the `base` rationale.
 	base: process.env.MFE_TIER_LIST_PUBLIC_PATH ?? "/static-assets/mfes/mfe-tier-list/",
 	plugins: [
 		react(),

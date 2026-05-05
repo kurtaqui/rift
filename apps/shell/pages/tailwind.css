@@ -7,5 +7,5 @@
 @import "@rift/styles/tokens.css";
 @import "@rift/styles/components.css";
 
-@source "../../mfe-champions/src";
-@source "../../mfe-tier-list/src";
+@source "../../../mfe/mfe-champions/src";
+@source "../../../mfe/mfe-tier-list/src";

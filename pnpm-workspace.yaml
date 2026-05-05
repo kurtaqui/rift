@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "mfe/*"
   - "libs/*"
 allowBuilds:
   nx: false

@@ -136,7 +136,7 @@ pnpm dev:shell            # http://localhost:3000
 pnpm dev:api              # http://localhost:3100
 ```
 
-Edits to MFE source (`apps/mfe-*/src/pages/...`) hot-reload through Vite as if
+Edits to MFE source (`mfe/mfe-*/src/pages/...`) hot-reload through Vite as if
 they lived inside the shell.
 
 ### Prod (federated mode)

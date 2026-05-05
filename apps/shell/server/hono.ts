@@ -24,8 +24,8 @@ const API_TARGET = process.env.RIFT_API_URL ?? "http://localhost:3100";
  */
 const SHELL_CWD = process.cwd();
 const MFE_MOUNTS: Record<string, string> = {
-	"mfe-champions": path.resolve(SHELL_CWD, process.env.MFE_CHAMPIONS_DIST ?? "../mfe-champions/dist"),
-	"mfe-tier-list": path.resolve(SHELL_CWD, process.env.MFE_TIER_LIST_DIST ?? "../mfe-tier-list/dist"),
+	"mfe-champions": path.resolve(SHELL_CWD, process.env.MFE_CHAMPIONS_DIST ?? "../../mfe/mfe-champions/dist"),
+	"mfe-tier-list": path.resolve(SHELL_CWD, process.env.MFE_TIER_LIST_DIST ?? "../../mfe/mfe-tier-list/dist"),
 };
 
 const MIME_TYPES: Record<string, string> = {

@@ -206,7 +206,7 @@ export default defineConfig({
 		},
 		{
 			// StencilJS components — class-based, uses h() not React, HTML attrs not React attrs
-			files: ["libs/ui/src/**/*.tsx", "apps/mfe-player/src/**/*.tsx", "apps/mfe-player/src/**/*.ts"],
+			files: ["libs/ui/src/**/*.tsx", "mfe/*/src/**/*.{ts,tsx}"],
 			rules: {
 				"react/prefer-function-component": "off",
 				// Stencil uses h() imported from @stencil/core, not React.createElement

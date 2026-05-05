@@ -7,15 +7,16 @@ Experiment and testing monorepo for exploring [Vike](https://vike.dev/), micro-f
 ```
 apps/
   shell/             # Vike host — global nav, home, 404, auth state, MF host (Phase 2)
-  mfe-champions/     # MFE 1 — champion browser, detail pages, abilities viewer
-  mfe-tier-list/     # MFE 2 — tier list rankings, meta builds (filterable by role/tier/patch)
-  mfe-player/        # MFE 3 — authenticated player profile, owned champions, match history
 libs/
   ui/                # StencilJS web components (core design system)
   champion/          # Champion domain: types & Valibot schemas (Champion, ChampionAbility, ChampionTier, ChampionSkin)
   player/            # Player domain: types & Valibot schemas (Player, PlayerChampion, PlayerMatchEntry)
   data-access/       # API clients & React hooks (Hono backend)
   storybook/         # Storybook configuration for libs/ui components
+mfe/
+  mfe-champions/     # MFE 1 — champion browser, detail pages, abilities viewer
+  mfe-tier-list/     # MFE 2 — tier list rankings, meta builds (filterable by role/tier/patch)
+  mfe-player/        # MFE 3 — authenticated player profile, owned champions, match history
 ```
 
 ## Domain Entities
@@ -88,6 +89,7 @@ pnpm create vike@latest <app-name> --react --tailwindcss --shadcn-ui --hono --ox
 Organize code **by feature/domain slice**, not by type. This applies to both `libs/` and within each `apps/` source tree.
 
 **Prefer** — feature-first:
+
 ```
 src/
   champion/
@@ -101,6 +103,7 @@ src/
 ```
 
 **Avoid** — type-first:
+
 ```
 src/
   components/
@@ -115,6 +118,7 @@ src/
 ```
 
 Rules:
+
 - Group code by what it **does** (champion, player, tier-list), not what it **is** (component, hook, atom)
 - Co-locate everything a feature needs: page, data-fetching, component, atom, test
 - Cross-cutting concerns belong in a `shared/` slice only when truly generic (e.g. error boundaries, layout primitives)
@@ -130,18 +134,21 @@ Each app uses `@/` as an alias for its own `src/` directory.
 - Use `@/` for **intra-app** imports only; use `@rift/*` aliases for cross-lib imports
 
 ### File Routing (Vike)
+
 - Pages use [filesystem routing](https://vike.dev/filesystem-routing): `pages/index/+Page.tsx`, `pages/champions/@id/+Page.tsx`
 - Data fetching: `+data.ts` files alongside `+Page.tsx`
 - Layouts: `+Layout.tsx` at route segment roots
 - Config: `+config.ts` per page/layout for SSR toggles, head tags, etc.
 
 ### Tier List Filters (`mfe-tier-list`)
+
 - Filter state lives in Jotai atoms: `tierAtom`, `roleAtom`, `patchAtom`
 - Supported filters: tier (S/A/B/C/D), role (Top/Jungle/Mid/ADC/Support), patch
 - Atoms are co-located with the feature slice: `src/tier-list/tier-list.atoms.ts`
 - URL search params are synced with filter atoms so filtered views are shareable/bookmarkable
 
 ### Authentication & Route Access
+
 - **Public** (no auth required): `mfe-champions`, `mfe-tier-list`
 - **Private** (login required): `apps/shell` + `mfe-player` — guarded via Auth.js session
 - Auth provider: [Auth.js](https://authjs.dev/) (`@auth/core`) with a Credentials provider (demo creds: `rift-demo` / `demo`) — session accessible as `pageContext.session`
@@ -150,6 +157,7 @@ Each app uses `@/` as an alias for its own `src/` directory.
 - Auth routes: `/api/auth/signin`, `/api/auth/signout`, `/api/auth/session` (handled by `server/authjs-handler.ts`)
 
 ### Player Profile (`mfe-player`)
+
 - Requires authentication — all pages guarded by `pages/+guard.ts`
 - Displays top 3 champions by mastery points (from `PlayerChampion`)
 - Owned champions grid links through to `mfe-champions` detail pages
@@ -157,17 +165,20 @@ Each app uses `@/` as an alias for its own `src/` directory.
 - Player data is fetched server-side using `session.user.id` (matches the seeded `subjectId`)
 
 ### State Management (Jotai)
+
 - Use Jotai atoms for UI filter state, user preferences, and cross-component derived state
 - Atoms are co-located with their feature slice: `src/tier-list/tier-list.atoms.ts` (not `src/atoms/`)
 - Do **not** use Jotai for server data — use `+data.ts` / React hooks in `libs/data-access`
 
 ### StencilJS Web Components (`libs/ui`)
+
 - All components are pure web components — no React-specific APIs inside `libs/ui`
 - Components consume a [React output target](https://stenciljs.com/docs/react) for use in Vike apps
 - Component names follow `lol-*` prefix convention (e.g. `lol-champion-card`, `lol-tier-badge`)
 - Stories live in `libs/storybook/` as `*.stories.tsx`
 
 ### Shared Libs
+
 - `libs/champion` — Champion domain: pure types + Valibot schemas; no framework code; leaf node within domain libs
 - `libs/player` — Player domain: pure types + Valibot schemas; depends on `libs/champion` for `ChampionRole`
 - `libs/data-access` — React hooks + Hono fetch utilities; depends on `libs/champion` + `libs/player`
@@ -175,6 +186,7 @@ Each app uses `@/` as an alias for its own `src/` directory.
 - NX enforce-module-boundaries: `apps/*` may import `libs/*`; `libs/player` may import `libs/champion`; domain libs (`champion`, `player`) may not import `libs/data-access`
 
 ### Code Style
+
 - **Formatter**: oxfmt — config at `.oxfmtrc.json`, run `pnpm oxfmt .` to format
 - **Linter**: oxlint — config at `oxlint.config.ts`, run `pnpm oxlint .` to lint
 - Plugins enabled: `typescript`, `import`, `react`, `react-perf`, `jsx-a11y`, `vitest`, `unicorn`
@@ -184,12 +196,14 @@ Each app uses `@/` as an alias for its own `src/` directory.
 - Avoid default exports in `libs/`; named exports only
 
 ### Testing
+
 - Unit tests: Vitest, co-located as `*.test.ts` or `*.spec.ts`
 - E2E: Playwright, in `<app>/e2e/` directory
 - Run unit tests: `pnpm nx run <project>:test`
 - Run E2E: `pnpm nx run <app>:e2e`
 
 ## Key References
+
 - [Vike docs](https://vike.dev/)
 - [vike-react API](https://vike.dev/vike-react)
 - [Vike routing](https://vike.dev/routing)
@@ -201,10 +215,12 @@ Each app uses `@/` as an alias for its own `src/` directory.
 - [Module Federation for Vite](https://github.com/module-federation/vite) — runtime MFE sharing
 
 ## MFE Patterns to Investigate
+
 - [OpenComponents](https://opencomponents.github.io/) — serverless micro-frontend registry and runtime
 - [AWS Frontend Discovery](https://github.com/awslabs/frontend-discovery) — service-based MFE discovery from AWS Labs
 
 ## LoL Data Sources (for mock/seed data)
+
 - [Riot Data Dragon API](https://developer.riotgames.com/docs/lol#data-dragon) — champion JSON, ability data
 - [Community Dragon](https://www.communitydragon.org/) — additional assets
 - [wiki.leagueoflegends.com](https://wiki.leagueoflegends.com/en-us/) — lore, ability details
