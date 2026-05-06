@@ -352,7 +352,7 @@ export const requireUser: MiddlewareHandler = async (c, next) => {
 // apps/api/src/app.ts
 const app = new Hono()
   .use("*", logger())
-  .use("*", cors({ origin: [process.env.SHELL_ORIGIN!], credentials: true }))
+  .use("*", cors({ origin: [SHELL_ORIGIN], credentials: true }))
   .use("*", readSession)
   .route("/champions", championsRoutes)
   .route("/tier-list", tierListRoutes)
@@ -380,8 +380,10 @@ export const createApiClient = (baseUrl: string, init?: RequestInit) =>
 
 ```ts
 // apps/mfe-champions/src/pages/champions/+data.ts
+import { RIFT_API_URL } from "../../env";
+
 export async function data(pageContext: PageContextServer) {
-  const api = createApiClient(process.env.API_URL!, {
+  const api = createApiClient(RIFT_API_URL, {
     headers: { cookie: pageContext.headers?.cookie ?? "" },
   });
   const res = await api.champions.$get();
@@ -602,8 +604,8 @@ Layout shape:
   federation({
     name: "shell",
     remotes: {
-      "remote-champions": { type: "module", entry: process.env.MFE_CHAMPIONS_URL!, name: "mfe_champions" },
-      "remote-tier-list": { type: "module", entry: process.env.MFE_TIERLIST_URL!, name: "mfe_tier_list" },
+      "remote-champions": { type: "module", entry: `${MFE_CHAMPIONS_URL}/mf-manifest.json`, name: "mfe_champions" },
+      "remote-tier-list": { type: "module", entry: `${MFE_TIER_LIST_URL}/mf-manifest.json`, name: "mfe_tier_list" },
     },
     shared: { /* see §6 */ },
   });
@@ -883,16 +885,16 @@ Follow-ups parked for later:
 
 ## 10. Trade-offs & Risks
 
-| Trade-off                                                   | Mitigation                                                                     |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| One server means API changes still need a shell deploy.     | Acceptable per requirements; Phase F (future) can split API to a separate Hono |
-| MF SSR is newer than CSR — edge cases possible.             | Pin `@module-federation/vite` version; add Playwright SSR tests per route      |
-| Vike + MF route-function-as-delegate is non-trivial.        | Encapsulate in a single helper `createRemoteRoute(name)` reused by all MFEs    |
-| Vertical MFE uses different SSR pipeline (Stencil hydrate). | Isolated to `/player/*`; does not affect horizontal MFE rendering              |
-| Tailwind class collisions between shell and remotes.        | Shared preset in `libs/styles`; remotes never re-emit base layer               |
-| Auth.js secret is currently hardcoded.                      | Phase A.2 must migrate to `process.env.AUTH_SECRET`                            |
-| Cross-MFE state in jotai — singleton requirement.           | `jotai` declared `singleton: true`; shell creates the root Provider            |
-| Stencil hydration cost on `/player/*`.                      | Acceptable for the explicit "vertical" example; opt out of full SSR if needed  |
+| Trade-off                                                   | Mitigation                                                                                     |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| One server means API changes still need a shell deploy.     | Acceptable per requirements; Phase F (future) can split API to a separate Hono                 |
+| MF SSR is newer than CSR — edge cases possible.             | Pin `@module-federation/vite` version; add Playwright SSR tests per route                      |
+| Vike + MF route-function-as-delegate is non-trivial.        | Encapsulate in a single helper `createRemoteRoute(name)` reused by all MFEs                    |
+| Vertical MFE uses different SSR pipeline (Stencil hydrate). | Isolated to `/player/*`; does not affect horizontal MFE rendering                              |
+| Tailwind class collisions between shell and remotes.        | Shared preset in `libs/styles`; remotes never re-emit base layer                               |
+| Auth.js secret is currently hardcoded.                      | Phase A.2 must migrate to `AUTH_SECRET` env var (via `.env.development` + deployment platform) |
+| Cross-MFE state in jotai — singleton requirement.           | `jotai` declared `singleton: true`; shell creates the root Provider                            |
+| Stencil hydration cost on `/player/*`.                      | Acceptable for the explicit "vertical" example; opt out of full SSR if needed                  |
 
 ---
 

@@ -1,6 +1,6 @@
 import { cors } from "hono/cors";
 
-const SHELL_ORIGIN = process.env.SHELL_ORIGIN ?? "http://localhost:3000";
+import { SHELL_ORIGIN } from "../env";
 
 /**
  * CORS allowing the shell origin to call the API with credentials so the

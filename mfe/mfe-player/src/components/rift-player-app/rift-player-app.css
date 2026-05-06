@@ -32,6 +32,7 @@
 }
 
 .tab {
+	display: inline-block;
 	background: transparent;
 	color: rgb(212 212 216);
 	border: 1px solid transparent;
@@ -39,6 +40,7 @@
 	padding: 0.4rem 0.85rem;
 	font-size: 0.875rem;
 	font-weight: 500;
+	text-decoration: none;
 	cursor: pointer;
 	transition:
 		background 120ms ease,

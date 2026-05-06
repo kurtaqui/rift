@@ -4,10 +4,9 @@ import { Hono } from "hono";
 import fs from "node:fs";
 import path from "node:path";
 
+import { MFE_CHAMPIONS_DIST, MFE_TIER_LIST_DIST, RIFT_API_URL } from "./env";
 import { playerMiddleware } from "./player-middleware";
 import { themeMiddleware } from "./theme-middleware";
-
-const API_TARGET = process.env.RIFT_API_URL ?? "http://localhost:3100";
 
 /**
  * Where each MFE's `dist/` (with `mf-manifest.json`, `remoteEntry.js`
@@ -17,15 +16,10 @@ const API_TARGET = process.env.RIFT_API_URL ?? "http://localhost:3100";
  * dev`) the federation plugin is gated off entirely (workspace alias is
  * used instead) so this handler is only exercised by the production
  * server.
- *
- * Resolved relative to `process.cwd()`, which is `apps/shell/` for both
- * `vike preview` and the documented prod entry. Override with
- * `MFE_*_DIST` env vars when serving from a different working directory.
  */
-const SHELL_CWD = process.cwd();
 const MFE_MOUNTS: Record<string, string> = {
-	"mfe-champions": path.resolve(SHELL_CWD, process.env.MFE_CHAMPIONS_DIST ?? "../../mfe/mfe-champions/dist"),
-	"mfe-tier-list": path.resolve(SHELL_CWD, process.env.MFE_TIER_LIST_DIST ?? "../../mfe/mfe-tier-list/dist"),
+	"mfe-champions": MFE_CHAMPIONS_DIST,
+	"mfe-tier-list": MFE_TIER_LIST_DIST,
 };
 
 const MIME_TYPES: Record<string, string> = {
@@ -107,7 +101,7 @@ function getApp(): Hono {
 			return;
 		}
 		const url = new URL(c.req.url);
-		const target = `${API_TARGET}${url.pathname.replace(/^\/api/, "")}${url.search}`;
+		const target = `${RIFT_API_URL}${url.pathname.replace(/^\/api/, "")}${url.search}`;
 		const init: RequestInit = {
 			method: c.req.method,
 			headers: c.req.raw.headers,

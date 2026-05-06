@@ -12,9 +12,9 @@
     }
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
-    "serve": "node --enable-source-maps dist/index.mjs",
+    "dev": "node --env-file=.env --import tsx/esm --watch src/index.ts",
+    "start": "node --env-file=.env --import tsx/esm src/index.ts",
+    "serve": "node --env-file=.env --enable-source-maps dist/index.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts"

@@ -1,6 +1,8 @@
 import type { Champion, ChampionTier } from "@rift/champion";
 import { createApiClient } from "@rift/data-access";
 
+import { RIFT_API_URL } from "../../env";
+
 export type EnrichedTierEntry = ChampionTier & {
 	champion: Pick<Champion, "id" | "name" | "splashArtUrl" | "squareIconUrl" | "roles">;
 };
@@ -10,10 +12,8 @@ export type Data = {
 	patches: string[];
 };
 
-const API_URL = process.env.RIFT_API_URL ?? "http://localhost:3100";
-
 export async function data(): Promise<Data> {
-	const client = createApiClient(API_URL);
+	const client = createApiClient(RIFT_API_URL);
 	const [tiersRes, championsRes] = await Promise.all([
 		client["tier-list"].$get({ query: {} }),
 		client.champions.$get(),

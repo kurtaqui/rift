@@ -4,18 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 import vike from "vike/plugin";
-import { defineConfig } from "vite";
-
-/**
- * Default URLs for the horizontal MFE remotes. The shell's Hono server
- * mounts each MFE's `dist/` under `/static-assets/mfes/<name>/*` (see
- * `apps/shell/server/hono.ts`), so the federation runtime fetches the
- * manifest and chunks from the shell's own origin — no extra static
- * host or CORS configuration. In CI/prod each remote can be deployed
- * to a CDN and its URL supplied via env.
- */
-const MFE_CHAMPIONS_URL = process.env.MFE_CHAMPIONS_URL ?? "/static-assets/mfes/mfe-champions";
-const MFE_TIER_LIST_URL = process.env.MFE_TIER_LIST_URL ?? "/static-assets/mfes/mfe-tier-list";
+import { defineConfig, loadEnv } from "vite";
+import type { Plugin } from "vite";
 
 /**
  * Bare-name → workspace source map for MFE pages, used by SSR (and dev
@@ -60,159 +50,175 @@ const MFE_BARE_NAME_TARGETS: Record<string, string> = {
  * gate the disable via `applyToEnvironment` + `command` here and on the
  * federation plugin below.
  */
-function makeMfeBareNameAliasPlugin(command: "serve" | "build") {
+function makeMfeBareNameAliasPlugin(command: "serve" | "build"): Plugin {
 	return {
 		name: "rift:mfe-bare-name-alias",
 		enforce: "pre" as const,
-		applyToEnvironment: (env: { name: string }) => command !== "build" || env.name !== "client",
+		applyToEnvironment: (viteEnv: { name: string }) => command !== "build" || viteEnv.name !== "client",
 		resolveId(source: string) {
 			return MFE_BARE_NAME_TARGETS[source];
 		},
 	};
 }
 
-export default defineConfig(({ command }) => ({
-	plugins: [
-		vike(),
-		react(),
-		tailwindcss(),
-		makeMfeBareNameAliasPlugin(command),
-		// Compile-time SSR for the Stencil player MFE. The plugin intercepts JSX
-		// that references components from `@rift/mfe-player/react`, calls the
-		// hydrate module, and replaces them with pre-rendered Declarative
-		// Shadow-DOM wrappers so the markup is server-rendered.
-		stencilSSR({
-			module: import("@rift/mfe-player/react"),
-			from: "@rift/mfe-player/react",
-			hydrateModule: import("@rift/mfe-player/hydrate"),
-			serializeShadowRoot: { default: "declarative-shadow-dom" },
-		}),
-		// Federation host registration is **client-build only** (D-A.5):
-		// - In dev (`vite dev`), the plugin is off; bare-name imports like
-		//   `import("mfe-champions/pages/...")` resolve via the
-		//   `mfe-champions` aliases below to the MFE source tree, so HMR
-		//   works without the MFE static host running.
-		// - In the SSR build, the plugin is also off (so SSR keeps using the
-		//   workspace source via the same aliases). This avoids loading MF
-		//   runtime on the server and keeps Vike's `+data` / `+title` hooks
-		//   server-rendered against the MFE module directly.
-		// - Only in the **client** production build do bare-name imports get
-		//   rewritten into `loadRemote(...)` calls that fetch the chunk from
-		//   the remote's `mf-manifest.json` at runtime.
-		// Loading the plugin in dev or SSR breaks Vike ("Default export from
-		// undefined must include a { fetch() } function").
-		//
-		// Vike uses Vite's environments API and runs the SSR + client builds
-		// from a single `vite build` invocation, so `isSsrBuild` is not a
-		// reliable per-environment signal. We gate the plugin to `command
-		// === "build"` here and use Vite's per-plugin `applyToEnvironment`
-		// hook below to confine each emitted plugin to the `client` env.
-		...(command === "build"
-			? federation({
-					name: "shell",
-					// Remotes are referenced as `<name>@<manifest-url>`. The plugin
-					// fetches each `mf-manifest.json` at build time to know what's
-					// exposed and at runtime to load chunks.
-					remotes: {
-						"mfe-champions": {
-							type: "module",
-							name: "mfe-champions",
-							entry: `${MFE_CHAMPIONS_URL}/mf-manifest.json`,
+export default defineConfig(({ command, mode }) => {
+	const env = loadEnv(mode, process.cwd(), "");
+
+	function requireEnv(key: string): string {
+		const value = env[key];
+		if (!value) {
+			throw new Error(`Missing required environment variable: ${key}`);
+		}
+		return value;
+	}
+
+	const MFE_CHAMPIONS_URL = requireEnv("MFE_CHAMPIONS_URL");
+	const MFE_TIER_LIST_URL = requireEnv("MFE_TIER_LIST_URL");
+	const RIFT_API_URL = requireEnv("RIFT_API_URL");
+
+	return {
+		plugins: [
+			vike(),
+			react(),
+			tailwindcss(),
+			makeMfeBareNameAliasPlugin(command),
+			// Compile-time SSR for the Stencil player MFE. The plugin intercepts JSX
+			// that references components from `@rift/mfe-player/react`, calls the
+			// hydrate module, and replaces them with pre-rendered Declarative
+			// Shadow-DOM wrappers so the markup is server-rendered.
+			stencilSSR({
+				module: import("@rift/mfe-player/react"),
+				from: "@rift/mfe-player/react",
+				hydrateModule: import("@rift/mfe-player/hydrate"),
+				serializeShadowRoot: { default: "declarative-shadow-dom" },
+			}),
+			// Federation host registration is **client-build only** (D-A.5):
+			// - In dev (`vite dev`), the plugin is off; bare-name imports like
+			//   `import("mfe-champions/pages/...")` resolve via the
+			//   `mfe-champions` aliases below to the MFE source tree, so HMR
+			//   works without the MFE static host running.
+			// - In the SSR build, the plugin is also off (so SSR keeps using the
+			//   workspace source via the same aliases). This avoids loading MF
+			//   runtime on the server and keeps Vike's `+data` / `+title` hooks
+			//   server-rendered against the MFE module directly.
+			// - Only in the **client** production build do bare-name imports get
+			//   rewritten into `loadRemote(...)` calls that fetch the chunk from
+			//   the remote's `mf-manifest.json` at runtime.
+			// Loading the plugin in dev or SSR breaks Vike ("Default export from
+			// undefined must include a { fetch() } function").
+			//
+			// Vike uses Vite's environments API and runs the SSR + client builds
+			// from a single `vite build` invocation, so `isSsrBuild` is not a
+			// reliable per-environment signal. We gate the plugin to `command
+			// === "build"` here and use Vite's per-plugin `applyToEnvironment`
+			// hook below to confine each emitted plugin to the `client` env.
+			...(command === "build"
+				? federation({
+						name: "shell",
+						// Remotes are referenced as `<name>@<manifest-url>`. The plugin
+						// fetches each `mf-manifest.json` at build time to know what's
+						// exposed and at runtime to load chunks.
+						remotes: {
+							"mfe-champions": {
+								type: "module",
+								name: "mfe-champions",
+								entry: `${MFE_CHAMPIONS_URL}/mf-manifest.json`,
+							},
+							"mfe-tier-list": {
+								type: "module",
+								name: "mfe-tier-list",
+								entry: `${MFE_TIER_LIST_URL}/mf-manifest.json`,
+							},
 						},
-						"mfe-tier-list": {
-							type: "module",
-							name: "mfe-tier-list",
-							entry: `${MFE_TIER_LIST_URL}/mf-manifest.json`,
+						shared: {
+							react: { singleton: true, requiredVersion: "^19.0.0" },
+							"react/": {},
+							"react-dom": { singleton: true, requiredVersion: "^19.0.0" },
+							"react-dom/": {},
+							jotai: { singleton: true },
+							// NOTE: do NOT add `vike` / `vike-react` here. The MF plugin
+							// rewrites every `shared` import to a virtual module, which
+							// replaces the Vike runtime entry's manifest id
+							// (`@@vike/dist/client/runtime-client-routing/entry.js`) with
+							// `node_modules/__mf__virtual/...vike__loadShare__.mjs`. Vike's
+							// production server then fails to look up its own entry and
+							// every route 500s with "You stumbled upon a Vike bug" in
+							// `getManifestEntry`. Vike is the host framework, not a
+							// remote-shared dep — let each MFE bundle its own copy.
 						},
-					},
-					shared: {
-						react: { singleton: true, requiredVersion: "^19.0.0" },
-						"react/": {},
-						"react-dom": { singleton: true, requiredVersion: "^19.0.0" },
-						"react-dom/": {},
-						jotai: { singleton: true },
-						// NOTE: do NOT add `vike` / `vike-react` here. The MF plugin
-						// rewrites every `shared` import to a virtual module, which
-						// replaces the Vike runtime entry's manifest id
-						// (`@@vike/dist/client/runtime-client-routing/entry.js`) with
-						// `node_modules/__mf__virtual/...vike__loadShare__.mjs`. Vike's
-						// production server then fails to look up its own entry and
-						// every route 500s with "You stumbled upon a Vike bug" in
-						// `getManifestEntry`. Vike is the host framework, not a
-						// remote-shared dep — let each MFE bundle its own copy.
-					},
-					// See note in MFE configs: peer-version mismatch with TS 6.
-					dts: false,
-				}).map(p => ({
-					...p,
-					applyToEnvironment: env => env.name === "client",
-				}))
-			: []),
-	],
-	server: {
-		proxy: {
-			// In dev, browser fetches to `/api/*` are proxied to apps/api on :3100
-			// (with the `/api` prefix stripped). The regex uses a negative
-			// lookahead so `/api/auth/**` is NOT matched here — those routes
-			// must reach the shell's own Hono server (`authjsHandler`) so the
-			// CSRF cookie set by `GET /api/auth/csrf` is read back by the
-			// callback POST on the same origin/handler.
-			"^/api/(?!auth(/|$)).*": {
-				target: process.env.RIFT_API_URL ?? "http://localhost:3100",
-				changeOrigin: true,
-				rewrite: p => p.replace(/^\/api/, ""),
+						// See note in MFE configs: peer-version mismatch with TS 6.
+						dts: false,
+					}).map(p => ({
+						...p,
+						applyToEnvironment: (viteEnv: { name: string }) => viteEnv.name === "client",
+					}))
+				: []),
+		],
+		server: {
+			proxy: {
+				// In dev, browser fetches to `/api/*` are proxied to apps/api on :3100
+				// (with the `/api` prefix stripped). The regex uses a negative
+				// lookahead so `/api/auth/**` is NOT matched here — those routes
+				// must reach the shell's own Hono server (`authjsHandler`) so the
+				// CSRF cookie set by `GET /api/auth/csrf` is read back by the
+				// callback POST on the same origin/handler.
+				"^/api/(?!auth(/|$)).*": {
+					target: RIFT_API_URL,
+					changeOrigin: true,
+					rewrite: p => p.replace(/^\/api/, ""),
+				},
 			},
 		},
-	},
-	resolve: {
-		// Most-specific subpath aliases must come before the base package alias.
-		alias: [
-			{ find: "@rift/ui/dist/components", replacement: path.resolve(__dirname, "../../libs/ui/dist/components") },
-			{ find: /^@rift\/ui$/, replacement: path.resolve(__dirname, "../../libs/ui/src/index.ts") },
-			{
-				find: "@rift/mfe-player/react",
-				replacement: path.resolve(__dirname, "../../mfe/mfe-player/src/react/components.ts"),
-			},
-			{
-				find: "@rift/mfe-player/hydrate",
-				replacement: path.resolve(__dirname, "../../mfe/mfe-player/hydrate/index.mjs"),
-			},
-			{
-				find: "@rift/mfe-player/loader",
-				replacement: path.resolve(__dirname, "../../mfe/mfe-player/loader/index.js"),
-			},
-			{
-				find: "@rift/mfe-player/dist/components",
-				replacement: path.resolve(__dirname, "../../mfe/mfe-player/dist/components"),
-			},
-			{
-				find: "@rift/mfe-player",
-				replacement: path.resolve(__dirname, "../../mfe/mfe-player/dist/index.js"),
-			},
-			{ find: "@rift/champion", replacement: path.resolve(__dirname, "../../libs/champion/src/index.ts") },
-			{ find: "@rift/data-access", replacement: path.resolve(__dirname, "../../libs/data-access/src/index.ts") },
-			{ find: "@", replacement: path.resolve(__dirname, "./src") },
-		],
-	},
-	optimizeDeps: {
-		exclude: [
-			"@rift/ui",
-			"@rift/champion",
-			"@rift/data-access",
-			"@rift/mfe-champions",
-			"@rift/mfe-player",
-			"@rift/mfe-tier-list",
-		],
-	},
-	ssr: {
-		noExternal: [
-			"@rift/ui",
-			"@rift/champion",
-			"@rift/data-access",
-			"@rift/mfe-champions",
-			"@rift/mfe-player",
-			"@rift/mfe-tier-list",
-			"@stencil/react-output-target",
-		],
-	},
-}));
+		resolve: {
+			// Most-specific subpath aliases must come before the base package alias.
+			alias: [
+				{ find: "@rift/ui/dist/components", replacement: path.resolve(__dirname, "../../libs/ui/dist/components") },
+				{ find: /^@rift\/ui$/, replacement: path.resolve(__dirname, "../../libs/ui/src/index.ts") },
+				{
+					find: "@rift/mfe-player/react",
+					replacement: path.resolve(__dirname, "../../mfe/mfe-player/src/react/components.ts"),
+				},
+				{
+					find: "@rift/mfe-player/hydrate",
+					replacement: path.resolve(__dirname, "../../mfe/mfe-player/hydrate/index.mjs"),
+				},
+				{
+					find: "@rift/mfe-player/loader",
+					replacement: path.resolve(__dirname, "../../mfe/mfe-player/loader/index.js"),
+				},
+				{
+					find: "@rift/mfe-player/dist/components",
+					replacement: path.resolve(__dirname, "../../mfe/mfe-player/dist/components"),
+				},
+				{
+					find: "@rift/mfe-player",
+					replacement: path.resolve(__dirname, "../../mfe/mfe-player/dist/index.js"),
+				},
+				{ find: "@rift/champion", replacement: path.resolve(__dirname, "../../libs/champion/src/index.ts") },
+				{ find: "@rift/data-access", replacement: path.resolve(__dirname, "../../libs/data-access/src/index.ts") },
+				{ find: "@", replacement: path.resolve(__dirname, "./src") },
+			],
+		},
+		optimizeDeps: {
+			exclude: [
+				"@rift/ui",
+				"@rift/champion",
+				"@rift/data-access",
+				"@rift/mfe-champions",
+				"@rift/mfe-player",
+				"@rift/mfe-tier-list",
+			],
+		},
+		ssr: {
+			noExternal: [
+				"@rift/ui",
+				"@rift/champion",
+				"@rift/data-access",
+				"@rift/mfe-champions",
+				"@rift/mfe-player",
+				"@rift/mfe-tier-list",
+				"@stencil/react-output-target",
+			],
+		},
+	};
+});

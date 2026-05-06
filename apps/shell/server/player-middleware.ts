@@ -2,7 +2,7 @@ import type { PlayerSummaryUser } from "@rift/data-access";
 import { enhance } from "@universal-middleware/core";
 import type { UniversalMiddleware } from "@universal-middleware/core";
 
-const API_TARGET = process.env.RIFT_API_URL ?? "http://localhost:3100";
+import { RIFT_API_URL } from "./env";
 
 /**
  * Shape of `pageContext.player` — only the fields the Nav and dashboard
@@ -45,7 +45,7 @@ export const playerMiddleware: UniversalMiddleware = enhance(
 
 		try {
 			const cookie = request.headers.get("cookie") ?? "";
-			const response = await fetch(`${API_TARGET}/player/me`, {
+			const response = await fetch(`${RIFT_API_URL}/player/me`, {
 				headers: { cookie, accept: "application/json" },
 			});
 			if (!response.ok) {
