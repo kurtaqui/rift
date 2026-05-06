@@ -20,7 +20,12 @@
       "mfe-champions/pages/champion-detail": ["../../mfe/mfe-champions/src/pages/champion-detail/Page.tsx"],
       "mfe-champions/pages/champion-detail/data": ["../../mfe/mfe-champions/src/pages/champion-detail/data.ts"],
       "mfe-tier-list/pages/tier-list": ["../../mfe/mfe-tier-list/src/pages/tier-list/Page.tsx"],
-      "mfe-tier-list/pages/tier-list/data": ["../../mfe/mfe-tier-list/src/pages/tier-list/data.ts"]
+      "mfe-tier-list/pages/tier-list/data": ["../../mfe/mfe-tier-list/src/pages/tier-list/data.ts"],
+      "@rift/mfe-fragment/client": ["../../libs/mfe-fragment/src/client.tsx"],
+      "@rift/mfe-fragment/server": ["../../libs/mfe-fragment/src/server.ts"],
+      "@rift/mfe-fragment/renderer": ["../../libs/mfe-fragment/src/renderer.ts"],
+      "~mfe/champions": ["../../mfe/mfe-champions/src/App.tsx"],
+      "~mfe/tier-list": ["../../mfe/mfe-tier-list/src/App.tsx"]
     }
   },
   "exclude": ["node_modules", "dist", ".vike"]

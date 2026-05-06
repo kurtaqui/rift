@@ -1,6 +1,6 @@
 import { loadRemote } from "@module-federation/runtime";
 import { useMemo, useEffect, useRef } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 
 export type MfeFragmentData = {
 	mfeHtml: string | null;
@@ -45,7 +45,15 @@ type MfeSlotProps = {
 	 * Module Federation `loadRemote` call so that client-side React mounts even
 	 * without a production MF bundle. Should be `undefined` in production builds.
 	 */
-	devLoader?: () => Promise<AppModule>;
+	devLoader?: (() => Promise<AppModule>) | undefined;
+	/**
+	 * Whether this is the initial SSR hydration render (hard refresh).
+	 * Pass `pageContext.isHydration` from the shell page component.
+	 * True  → use `hydrateRoot` to attach to server-rendered DOM (zero flicker).
+	 * False → use `createRoot` on a fresh imperative node (SPA navigation).
+	 * Defaults to false, which is the safe fallback (fresh mount).
+	 */
+	isHydration?: boolean | undefined;
 };
 
 /**
@@ -57,15 +65,17 @@ type MfeSlotProps = {
  *   `dangerouslySetInnerHTML` — content is visible before any JS runs.
  *
  * Client mount (useEffect):
- *   Loads the MFE's `./app` entry via Module Federation and calls `createRoot` on the
- *   same container. The App component receives `data` (identical to SSR data) and
- *   `basePath` (the shell prefix) so its MemoryRouter picks the right child route.
+ *   Loads the MFE's `./app` entry via Module Federation and calls `hydrateRoot`
+ *   when SSR HTML is present (attaches React fibers to existing DOM — zero flicker),
+ *   or `createRoot` when no SSR HTML is available (local dev / fallback).
+ *   The App component receives `data` (identical to SSR data) and `basePath`
+ *   (the shell prefix) so its MemoryRouter picks the right child route.
  *
  * Local dev (MFE_SSR_MODE=local):
  *   `mfeHtml` is `null`. The container starts empty and React fills it after the
  *   remote is loaded.
  */
-export function MfeSlot({ mfe, mfeHtml, mfeData, devLoader }: MfeSlotProps): React.JSX.Element {
+export function MfeSlot({ mfe, mfeHtml, mfeData, devLoader, isHydration = false }: MfeSlotProps): React.JSX.Element {
 	const wrapperRef = useRef<HTMLDivElement>(null);
 	// Track whether we've already created a React root to avoid double-mounting.
 	const rootMountedRef = useRef(false);
@@ -79,16 +89,44 @@ export function MfeSlot({ mfe, mfeHtml, mfeData, devLoader }: MfeSlotProps): Rea
 		}
 		rootMountedRef.current = true;
 
-		// Create an imperatively-managed mount point that is NOT a React-managed
-		// element. React 19 forbids calling createRoot on a node that React itself
-		// created with dangerouslySetInnerHTML. By creating the node via the DOM
-		// API we bypass that restriction while still replacing the SSR HTML cleanly.
 		const wrapper = wrapperRef.current;
-		const mountPoint = document.createElement("div");
-		wrapper.innerHTML = "";
-		wrapper.append(mountPoint);
-
 		const basePath = MFE_BASE_PATHS[mfe];
+
+		/**
+		 * Mount the App component into the wrapper:
+		 *
+		 * mfeHtml && isHydration (hard refresh):
+		 *   `hydrateRoot` — DOM was written by the server. React attaches fibers and
+		 *   event handlers to the existing nodes without touching them → zero flicker.
+		 *   `hydrateRoot` is NOT subject to React 19's restriction that bans `createRoot`
+		 *   on a node with `dangerouslySetInnerHTML`; it is the intended API for this case.
+		 *
+		 * mfeHtml && !isHydration (SPA navigation):
+		 *   DOM content was placed by React's own `dangerouslySetInnerHTML` (client-side
+		 *   render), so `hydrateRoot` would fail with a diff error and `createRoot` would
+		 *   trigger React 19's restriction. Create an imperative child node that React
+		 *   never managed, clear the wrapper, and mount there.
+		 *
+		 * !mfeHtml (MFE_SSR_MODE=local / fragment server unreachable):
+		 *   Wrapper is an empty div (no dangerouslySetInnerHTML) — `createRoot` directly.
+		 */
+		const mountApp = (App: React.ComponentType<{ data?: unknown; basePath?: string }>): void => {
+			const element = <App data={mfeData ?? undefined} basePath={basePath} />;
+			if (mfeHtml && isHydration) {
+				// Hard refresh: DOM was written by the server.
+				hydrateRoot(wrapper, element);
+			} else if (mfeHtml) {
+				// SPA nav: DOM was placed by React's dangerouslySetInnerHTML.
+				// Must clear and mount onto an imperative (non-React-managed) child node.
+				const mountPoint = document.createElement("div");
+				wrapper.innerHTML = "";
+				wrapper.append(mountPoint);
+				createRoot(mountPoint).render(element);
+			} else {
+				// No SSR HTML — empty wrapper, createRoot directly.
+				createRoot(wrapper).render(element);
+			}
+		};
 
 		// Dev mode: use the caller-supplied direct Vite import instead of MF.
 		// `devLoader` is a `() => import("~mfe/...")` alias resolved by the shell's
@@ -96,8 +134,7 @@ export function MfeSlot({ mfe, mfeHtml, mfeData, devLoader }: MfeSlotProps): Rea
 		if (devLoader) {
 			devLoader()
 				.then(mod => {
-					const App = mod.default;
-					createRoot(mountPoint).render(<App data={mfeData ?? undefined} basePath={basePath} />);
+					mountApp(mod.default);
 				})
 				.catch(console.error);
 			return;
@@ -118,8 +155,7 @@ export function MfeSlot({ mfe, mfeHtml, mfeData, devLoader }: MfeSlotProps): Rea
 					if (!remote?.default) {
 						return;
 					}
-					const App = remote.default;
-					createRoot(mountPoint).render(<App data={mfeData ?? undefined} basePath={basePath} />);
+					mountApp(remote.default);
 				})
 				.catch(console.error);
 		} catch {
@@ -130,17 +166,22 @@ export function MfeSlot({ mfe, mfeHtml, mfeData, devLoader }: MfeSlotProps): Rea
 		// oxlint-disable-next-line react-hooks/exhaustive-deps -- caller-controlled deps, static mfe
 	}, [mfe, devLoader]);
 
-	// suppressHydrationWarning: the inner HTML is foreign to the shell's React
-	// tree — React should not validate or manage it during shell hydration.
-	// createRoot is NOT called on this element; instead, the useEffect creates an
-	// imperative child node as the React root, bypassing the React 19 restriction
-	// on mixing dangerouslySetInnerHTML with createRoot on the same node.
-	return (
-		<div
-			ref={wrapperRef}
-			// oxlint-disable-next-line react/no-danger -- intentional: embedding MFE SSR fragment HTML
-			dangerouslySetInnerHTML={htmlContent}
-			suppressHydrationWarning
-		/>
-	);
+	// Always render dangerouslySetInnerHTML when mfeHtml is present.
+	// This ensures the server and client produce identical HTML (no hydration mismatch).
+	// The useEffect then decides between hydrateRoot (hard refresh) or the imperative
+	// mountPoint + createRoot approach (SPA nav) based on isHydration — client-only.
+	// suppressHydrationWarning: the inner HTML is a foreign React tree — the shell
+	// should not validate it during its own hydration pass.
+	if (mfeHtml) {
+		return (
+			<div
+				ref={wrapperRef}
+				// oxlint-disable-next-line react/no-danger -- intentional: embedding MFE SSR fragment HTML
+				dangerouslySetInnerHTML={htmlContent}
+				suppressHydrationWarning
+			/>
+		);
+	}
+
+	return <div ref={wrapperRef} />;
 }

@@ -1,0 +1,83 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Debug: shell",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["vike", "dev", "--port", "3000"],
+			"cwd": "${workspaceFolder}/apps/shell",
+			"env": {
+				"NODE_OPTIONS": "--inspect"
+			},
+			"sourceMaps": true,
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "Debug: api",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["tsx", "watch", "--inspect", "src/index.ts"],
+			"cwd": "${workspaceFolder}/apps/api",
+			"sourceMaps": true,
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "Debug: mfe-champions",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["vike", "dev"],
+			"cwd": "${workspaceFolder}/mfe/mfe-champions",
+			"env": {
+				"NODE_OPTIONS": "--inspect=9230"
+			},
+			"sourceMaps": true,
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "Debug: mfe-tier-list",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "pnpm",
+			"runtimeArgs": ["vike", "dev"],
+			"cwd": "${workspaceFolder}/mfe/mfe-tier-list",
+			"env": {
+				"NODE_OPTIONS": "--inspect=9231"
+			},
+			"sourceMaps": true,
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+			"console": "integratedTerminal"
+		},
+		{
+			"name": "Attach to running process",
+			"type": "node",
+			"request": "attach",
+			"port": 9229,
+			"sourceMaps": true,
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+		}
+	],
+	"compounds": [
+		{
+			"name": "Debug: all servers",
+			"configurations": [
+				"Debug: api",
+				"Debug: shell",
+				"Debug: mfe-champions",
+				"Debug: mfe-tier-list"
+			],
+			"stopAll": true
+		}
+	]
+}
