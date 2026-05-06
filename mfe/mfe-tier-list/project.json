@@ -21,6 +21,14 @@
       "outputs": ["{projectRoot}/dist"],
       "dependsOn": ["^build"]
     },
+    "build:watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm build:watch",
+        "cwd": "mfe/mfe-tier-list"
+      },
+      "outputs": ["{projectRoot}/dist"]
+    },
     "preview": {
       "executor": "nx:run-commands",
       "options": {

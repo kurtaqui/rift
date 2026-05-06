@@ -1,6 +1,29 @@
-import { loadRemote } from "@module-federation/runtime";
+import { init, loadRemote } from "@module-federation/runtime";
 import { useMemo, useEffect, useRef } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
+
+// In Vike's dev server, the federation plugin's bootstrap virtual module does
+// not run before component code, so the MF runtime is never initialized and
+// loadRemote() throws #RUNTIME-009. Call init() here at module evaluation time
+// to register the runtime. init() is idempotent — safe to call even if the
+// plugin's own bootstrap fires later.
+if (import.meta.env.DEV) {
+	init({
+		name: "shell",
+		remotes: [
+			{
+				name: "mfe-champions",
+				entry: `${import.meta.env.VITE_MFE_CHAMPIONS_URL}/mf-manifest.json`,
+				type: "module",
+			},
+			{
+				name: "mfe-tier-list",
+				entry: `${import.meta.env.VITE_MFE_TIER_LIST_URL}/mf-manifest.json`,
+				type: "module",
+			},
+		],
+	});
+}
 
 export type MfeFragmentData = {
 	mfeHtml: string | null;
@@ -38,14 +61,6 @@ type MfeSlotProps = {
 	mfeHtml: string | null;
 	/** Serialised page data returned alongside the fragment HTML. */
 	mfeData: unknown;
-	// todo: use MF for dev?
-	/**
-	 * Dev-mode loader: a `() => import("...")` pointing directly at the MFE's
-	 * `App.tsx` via a Vite alias. When provided, this is used instead of the
-	 * Module Federation `loadRemote` call so that client-side React mounts even
-	 * without a production MF bundle. Should be `undefined` in production builds.
-	 */
-	devLoader?: (() => Promise<AppModule>) | undefined;
 	/**
 	 * Whether this is the initial SSR hydration render (hard refresh).
 	 * Pass `pageContext.isHydration` from the shell page component.
@@ -75,7 +90,7 @@ type MfeSlotProps = {
  *   `mfeHtml` is `null`. The container starts empty and React fills it after the
  *   remote is loaded.
  */
-export function MfeSlot({ mfe, mfeHtml, mfeData, devLoader, isHydration = false }: MfeSlotProps): React.JSX.Element {
+export function MfeSlot({ mfe, mfeHtml, mfeData, isHydration = false }: MfeSlotProps): React.JSX.Element {
 	const wrapperRef = useRef<HTMLDivElement>(null);
 	// Track whether we've already created a React root to avoid double-mounting.
 	const rootMountedRef = useRef(false);
@@ -128,43 +143,22 @@ export function MfeSlot({ mfe, mfeHtml, mfeData, devLoader, isHydration = false 
 			}
 		};
 
-		// Dev mode: use the caller-supplied direct Vite import instead of MF.
-		// `devLoader` is a `() => import("~mfe/...")` alias resolved by the shell's
-		// Vite config — no MF runtime required.
-		if (devLoader) {
-			devLoader()
-				.then(mod => {
-					mountApp(mod.default);
-				})
-				.catch(console.error);
-			return;
-		}
-
-		// Production: load via Module Federation.
-		// `loadRemote` asserts the MF runtime is initialized synchronously before
-		// returning a promise. In dev mode the federation plugin is disabled
-		// (`command !== "build"` in vite.config.ts), so the runtime is never
-		// initialized and the assertion throws. Wrap in try-catch so the SSR HTML
-		// from the fragment server remains as-is instead of crashing the page.
-		// In production the runtime is initialized by the generated federation
-		// bootstrap before any component mounts, so the try path is never hit.
+		// Load via Module Federation. The federation plugin is always active in
+		// the `client` environment (dev + build), so the runtime is initialized
+		// by the generated federation bootstrap before any component mounts.
 		const remoteName = MFE_REMOTES[mfe];
-		try {
-			loadRemote<AppModule>(remoteName)
-				.then(remote => {
-					if (!remote?.default) {
-						return;
-					}
-					mountApp(remote.default);
-				})
-				.catch(console.error);
-		} catch {
-			// MF runtime not ready (dev mode without devLoader). SSR fragment HTML stays in place.
-		}
-		// mfe/devLoader are fixed per render; mfeData intentionally excluded —
+		loadRemote<AppModule>(remoteName)
+			.then(remote => {
+				if (!remote?.default) {
+					return;
+				}
+				mountApp(remote.default);
+			})
+			.catch(console.error);
+		// mfe is fixed per render; mfeData intentionally excluded —
 		// re-mounting on data change would tear down and recreate the React root.
 		// oxlint-disable-next-line react-hooks/exhaustive-deps -- caller-controlled deps, static mfe
-	}, [mfe, devLoader]);
+	}, [mfe]);
 
 	// Always render dangerouslySetInnerHTML when mfeHtml is present.
 	// This ensures the server and client produce identical HTML (no hydration mismatch).

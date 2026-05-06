@@ -49,7 +49,7 @@ export default defineConfig(({ command, mode }) => {
 				// files to leak into `libs/*/src/`. The shell consumes our pages via
 				// the package `exports` map, so MF type sharing is unnecessary.
 				dts: false,
-			}).map((p) => ({
+			}).map(p => ({
 				...p,
 				applyToEnvironment: (env: { name: string }) => env.name === "client",
 			})),
@@ -92,6 +92,9 @@ export default defineConfig(({ command, mode }) => {
 			port: 3012,
 			strictPort: true,
 			origin: requireEnv("MFE_TIER_LIST_URL"),
+			// Allow cross-origin requests from the shell (`:3000`) in isolated
+			// dev mode (VITE_MFE_ISOLATED=true).
+			cors: true,
 		},
 		preview: {
 			port: 3012,

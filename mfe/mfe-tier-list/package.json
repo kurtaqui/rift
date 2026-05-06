@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "vike dev",
     "build": "vite build",
+    "build:watch": "node build-watch.mjs",
     "preview": "vite preview",
     "lint": "oxlint --type-aware ."
   },
