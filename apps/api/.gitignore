@@ -1,2 +1,8 @@
 data/
 drizzle/
+
+# dotenv — .env is committed base defaults; locals are gitignored personal overrides
+# .env        <- DO commit
+.env.local
+.env.*.local
+!.env.example

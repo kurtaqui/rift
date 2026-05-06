@@ -36,6 +36,12 @@ export class RiftPlayerApp {
 	/** Match history, forwarded to `<rift-player-matches>`. */
 	@Prop() matchHistory?: MatchEntry[];
 
+	/**
+	 * Base URL path the component is mounted at (e.g. "/player").
+	 * Used to build correct `href` attributes on tab links for SSR and middle-click support.
+	 */
+	@Prop() basePath: string = "/player";
+
 	/** Initial sub-route, used by the host to deep-link e.g. /player/match-history. */
 	@Prop({ mutable: true }) initialRoute: SubRoute = "overview";
 
@@ -81,15 +87,26 @@ export class RiftPlayerApp {
 		this.routeChange.emit({ path: ROUTE_TO_PATH[next], route: next });
 	};
 
+	private tabHref(target: SubRoute): string {
+		const path = ROUTE_TO_PATH[target];
+		return path ? `${this.basePath}/${path}` : this.basePath;
+	}
+
 	private renderTab(label: string, target: SubRoute) {
 		const active = this.route === target;
-		const handleClick = () => {
+		const handleClick = (e: MouseEvent) => {
+			// Let the browser handle middle-click, ctrl/meta/shift+click naturally
+			// so tabs can be opened in a new tab without extra wiring.
+			if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+				return;
+			}
+			e.preventDefault();
 			this.go(target);
 		};
 		return (
-			<button type="button" class="tab" aria-current={active ? "page" : undefined} onClick={handleClick}>
+			<a href={this.tabHref(target)} class="tab" aria-current={active ? "page" : undefined} onClick={handleClick}>
 				{label}
-			</button>
+			</a>
 		);
 	}
 

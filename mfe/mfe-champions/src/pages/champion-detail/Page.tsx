@@ -22,6 +22,12 @@ export default function Page({ data: dataProp }: { data?: unknown }) {
 				(dataProp as unknown as Data)
 			: hookData;
 
+	// todo: return 404
+	// Guard: fragment server unreachable and no Vike context (e.g. devLoader without data).
+	if (!champion) {
+		return null;
+	}
+
 	const abilities = [...champion.abilities].toSorted((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
 
 	const statEntries = Object.entries(champion.stats).map(([key, value]) => ({ key, value }));
@@ -40,7 +46,7 @@ export default function Page({ data: dataProp }: { data?: unknown }) {
 			{/* Hero */}
 			<section className="relative overflow-hidden rounded-xl mb-10">
 				<img src={champion.splashArtUrl} alt={champion.name} className="w-full max-h-80 object-cover object-top" />
-				<div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+				<div className="absolute inset-0 bg-linear-to-t from-background via-background/60 to-transparent" />
 				<div className="absolute bottom-0 left-0 p-6">
 					<div className="flex flex-wrap gap-2 mb-2">
 						{champion.roles.map(role => (
@@ -80,7 +86,7 @@ export default function Page({ data: dataProp }: { data?: unknown }) {
 					{abilities.map(ability => (
 						<div key={ability.id} className="rounded-lg border border-border bg-card p-4">
 							<div className="flex items-center gap-2 mb-2">
-								<span className="inline-flex items-center justify-center w-7 h-7 rounded bg-muted text-xs font-bold text-muted-foreground">
+								<span className="inline-flex items-center justify-center whitespace-nowrap rounded bg-muted px-2 py-1 text-xs font-bold text-muted-foreground">
 									{SLOT_LABEL[ability.slot]}
 								</span>
 								<span className="font-semibold text-sm">{ability.name}</span>

@@ -3,16 +3,16 @@ import { createApiClient } from "@rift/data-access";
 import { render } from "vike/abort";
 import type { PageContextServer } from "vike/types";
 
+import { RIFT_API_URL } from "../../env";
+
 export type Data = Champion & {
 	abilities: ChampionAbility[];
 	skins: ChampionSkin[];
 };
 
-const API_URL = process.env.RIFT_API_URL ?? "http://localhost:3100";
-
 export async function data(pageContext: PageContextServer): Promise<Data> {
 	const { id } = pageContext.routeParams;
-	const client = createApiClient(API_URL);
+	const client = createApiClient(RIFT_API_URL);
 	const res = await client.champions[":id"].$get({ param: { id } });
 	if (res.status === 404) {
 		throw render(404);

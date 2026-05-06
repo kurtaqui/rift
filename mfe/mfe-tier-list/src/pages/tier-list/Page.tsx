@@ -20,7 +20,11 @@ export default function Page({ data: dataProp }: { data?: unknown }) {
 		dataProp !== undefined && dataProp !== null && typeof dataProp === "object"
 			? // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- object-guard above makes this safe
 				(dataProp as unknown as Data)
-			: hookData;
+			: hookData; // Guard: fragment server unreachable and no Vike context (e.g. devLoader without data).
+	// todo: return 404
+	if (!resolved) {
+		return null;
+	}
 	const { entries, patches } = resolved;
 
 	const tierFilter = useAtomValue(tierAtom);

@@ -7,9 +7,9 @@
 
 ## Properties
 
-| Property         | Attribute | Description                                                 | Type                    | Default     |
-| ---------------- | --------- | ----------------------------------------------------------- | ----------------------- | ----------- |
-| `ownedChampions` | --        | Owned champions. Falls back to mock data when not provided. | `PlayerChampionEntry[]` | `undefined` |
+| Property         | Attribute | Description                                                   | Type                    | Default     |
+| ---------------- | --------- | ------------------------------------------------------------- | ----------------------- | ----------- |
+| `ownedChampions` | --        | Owned champions. Renders a skeleton grid when not yet loaded. | `PlayerChampionEntry[]` | `undefined` |
 
 
 ## Dependencies

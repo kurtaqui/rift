@@ -7,10 +7,10 @@
 
 ## Properties
 
-| Property     | Attribute | Description                                                          | Type                                                                                  | Default     |
-| ------------ | --------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------- |
-| `topMastery` | --        | Top champions by mastery. Falls back to mock data when not provided. | `PlayerChampionEntry[]`                                                               | `undefined` |
-| `user`       | --        |                                                                      | `{ id: string; summonerName: string; profileIconId: number; summonerLevel: number; }` | `undefined` |
+| Property     | Attribute | Description                                                             | Type                                                                                  | Default     |
+| ------------ | --------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------- |
+| `topMastery` | --        | Top champions by mastery. Falls back to a skeleton when not yet loaded. | `PlayerChampionEntry[]`                                                               | `undefined` |
+| `user`       | --        |                                                                         | `{ id: string; summonerName: string; profileIconId: number; summonerLevel: number; }` | `undefined` |
 
 
 ## Dependencies
