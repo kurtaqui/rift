@@ -21,8 +21,27 @@
       "outputs": ["{projectRoot}/dist"],
       "dependsOn": ["^build"]
     },
+    "build:client": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm build:client",
+        "cwd": "mfe/mfe-champions"
+      },
+      "outputs": ["{projectRoot}/dist/client"],
+      "dependsOn": ["^build"]
+    },
+    "dev:client": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "command": "pnpm build:client:watch",
+        "cwd": "mfe/mfe-champions"
+      },
+      "outputs": ["{projectRoot}/dist/client"]
+    },
     "preview": {
       "executor": "nx:run-commands",
+      "continuous": true,
       "options": {
         "command": "pnpm preview",
         "cwd": "mfe/mfe-champions"

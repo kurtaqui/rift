@@ -1,176 +1,195 @@
-import { init, loadRemote } from "@module-federation/runtime";
-import { useMemo, useEffect, useRef } from "react";
-import { createRoot, hydrateRoot } from "react-dom/client";
-
-// In Vike's dev server, the federation plugin's bootstrap virtual module does
-// not run before component code, so the MF runtime is never initialized and
-// loadRemote() throws #RUNTIME-009. Call init() here at module evaluation time
-// to register the runtime. init() is idempotent — safe to call even if the
-// plugin's own bootstrap fires later.
-if (import.meta.env.DEV) {
-	init({
-		name: "shell",
-		remotes: [
-			{
-				name: "mfe-champions",
-				entry: `${import.meta.env.VITE_MFE_CHAMPIONS_URL}/mf-manifest.json`,
-				type: "module",
-			},
-			{
-				name: "mfe-tier-list",
-				entry: `${import.meta.env.VITE_MFE_TIER_LIST_URL}/mf-manifest.json`,
-				type: "module",
-			},
-		],
-	});
-}
+import { useEffect, useRef, useMemo } from "react";
 
 export type MfeFragmentData = {
 	mfeHtml: string | null;
 	mfeData: unknown;
 };
 
-/** Matches the `MfeTarget` in server.ts — kept in sync manually (separate browser/server bundles). */
-export type MfeTarget = "champions" | "tier-list";
+export type MfeSlotRouteContext = Pick<MfeSlotPageContext, "route">;
 
-/**
- * Module Federation remote name for each MFE's single `./app` entry.
- * The shell never references internal MFE page names.
- */
-const MFE_REMOTES: Record<MfeTarget, string> = {
-	champions: "mfe-champions/app",
-	"tier-list": "mfe-tier-list/app",
+export type MfeShellPageData = MfeFragmentData & {
+	mfeSrc: string;
+	pageContext: MfeSlotRouteContext;
 };
 
-/**
- * Shell URL prefix for each MFE. Passed to the remote App as `basePath` so
- * it can seed its MemoryRouter with the correct MFE-relative path.
- *   shell "/champions/ahri"  → basePath "/champions"  → MFE router sees "/ahri"
- */
-const MFE_BASE_PATHS: Record<MfeTarget, string> = {
-	champions: "/champions",
-	"tier-list": "/tier-list",
-};
-
-type AppModule = { default: React.ComponentType<{ data?: unknown; basePath?: string }> };
-
-type MfeSlotProps = {
-	/** Which MFE to render — shell never names internal MF remote paths. */
-	mfe: MfeTarget;
-	/** Pre-rendered HTML from the MFE fragment server (null in local dev mode). */
-	mfeHtml: string | null;
-	/** Serialised page data returned alongside the fragment HTML. */
-	mfeData: unknown;
+export type MfeSlotPageContext = {
+	/** Shell route, e.g. `/champions/ahri` or `/tier-list`. */
+	route: string;
 	/**
-	 * Whether this is the initial SSR hydration render (hard refresh).
-	 * Pass `pageContext.isHydration` from the shell page component.
-	 * True  → use `hydrateRoot` to attach to server-rendered DOM (zero flicker).
-	 * False → use `createRoot` on a fresh imperative node (SPA navigation).
-	 * Defaults to false, which is the safe fallback (fresh mount).
+	 * Shell path prefix mounted for this MFE, e.g. `/champions` or `/tier-list`.
+	 * Optional: defaults to the first path segment of `route`.
 	 */
+	mountPath?: string;
+	/** True on first page load (hard refresh). False on Vike SPA navigations. */
 	isHydration?: boolean | undefined;
 };
 
+type MfeMount = (
+	container: HTMLElement,
+	props: {
+		data?: unknown;
+		route?: string;
+		mountPath?: string;
+		ssrHtml?: string | null;
+		isHydration?: boolean;
+	},
+) => void;
+
 /**
- * Renders an MFE page inside the shell.
+ * Injects a `<script type="module">` tag for the MFE client bundle exactly
+ * once per unique `src` origin. Idempotent — safe to call on every render.
  *
- * SSR / SPA navigation:
- *   The shell's `+data.ts` calls `fetchMfeFragment` and returns `{ mfeHtml, mfeData }`
- *   via `passToClient`. `MfeSlot` immediately renders the pre-built HTML via
- *   `dangerouslySetInnerHTML` — content is visible before any JS runs.
- *
- * Client mount (useEffect):
- *   Loads the MFE's `./app` entry via Module Federation and calls `hydrateRoot`
- *   when SSR HTML is present (attaches React fibers to existing DOM — zero flicker),
- *   or `createRoot` when no SSR HTML is available (local dev / fallback).
- *   The App component receives `data` (identical to SSR data) and `basePath`
- *   (the shell prefix) so its MemoryRouter picks the right child route.
- *
- * Local dev (MFE_SSR_MODE=local):
- *   `mfeHtml` is `null`. The container starts empty and React fills it after the
- *   remote is loaded.
+ * The browser fetches the script from the MFE server (e.g. `:3011/mfe.js`)
+ * so source maps are served from the same origin — DevTools resolves them
+ * automatically without any shell-side configuration.
  */
-export function MfeSlot({ mfe, mfeHtml, mfeData, isHydration = false }: MfeSlotProps): React.JSX.Element {
+function injectMfeScript(src: string): void {
+	const isDev = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV === true;
+	const scriptUrl = isDev ? `${src}/src/client-entry.ts` : `${src}/mfe.js`;
+	if (document.querySelector(`script[data-mfe-src="${CSS.escape(scriptUrl)}"]`)) {
+		return;
+	}
+	const el = document.createElement("script");
+	el.type = "module";
+	el.src = scriptUrl;
+	el.dataset["mfeSrc"] = scriptUrl;
+	document.head.append(el);
+}
+
+type MfeSlotProps = {
+	/** Base URL of the MFE server, e.g. `http://localhost:3011`. */
+	src: string;
+	/** Shared page context consumed by the MFE host. */
+	pageContext: MfeSlotPageContext;
+	/** SSR HTML from the fragment endpoint. `null` → CSR-only. */
+	ssrHtml: string | null;
+	/** Data returned alongside the SSR HTML, forwarded to the client App. */
+	ssrData: unknown;
+};
+
+function toMfeRoute(route: string, mountPath: string): string {
+	if (route === "") {
+		return "/";
+	}
+
+	let pathname = route;
+	try {
+		pathname = new URL(route).pathname;
+	} catch {
+		// already a pathname
+	}
+
+	if (mountPath === "/") {
+		return pathname || "/";
+	}
+
+	if (pathname === mountPath) {
+		return "/";
+	}
+
+	if (pathname.startsWith(`${mountPath}/`)) {
+		return pathname.slice(mountPath.length) || "/";
+	}
+
+	return pathname || "/";
+}
+
+function inferMountPath(route: string): string {
+	let pathname = route;
+	try {
+		pathname = new URL(route).pathname;
+	} catch {
+		// already a pathname
+	}
+	const firstSegment = pathname.split("/").find(Boolean);
+	return firstSegment ? `/${firstSegment}` : "/";
+}
+
+/**
+ * Generic MFE host component.
+ *
+ * Server render: inlines `ssrHtml` so the page is immediately visible.
+ *
+ * Client mount:
+ * 1. Injects `<src>/mfe.js` — the MFE's self-contained client bundle. Source
+ *    maps resolve from the MFE origin (dev: full; prod: hidden).
+ * 2. Polls for `window.__mfe_mount__<src>` set by the MFE bundle, then lets
+ *    the MFE mount/hydrate itself using its own React + ReactDOM runtime.
+ * 3. Listens for `mfe:navigate` CustomEvents from the MFE and calls
+ *    `history.pushState` to sync the URL without a Vike round-trip.
+ *
+ * Vike SPA nav: when `route` changes after mount, calls
+ * `window.__mfe_navigate__<src>(newRoute)` to drive MemoryRouter programmatically.
+ */
+export function MfeSlot({ src, pageContext, ssrHtml, ssrData }: MfeSlotProps): React.JSX.Element {
+	const { route, mountPath, isHydration = false } = pageContext;
 	const wrapperRef = useRef<HTMLDivElement>(null);
-	// Track whether we've already created a React root to avoid double-mounting.
-	const rootMountedRef = useRef(false);
+	const hasMountedRef = useRef(false);
+	const htmlContent = useMemo(() => ({ __html: ssrHtml ?? "" }), [ssrHtml]);
+	const resolvedMountPath = useMemo(() => mountPath ?? inferMountPath(route), [mountPath, route]);
+	const mfeRoute = useMemo(() => toMfeRoute(route, resolvedMountPath), [route, resolvedMountPath]);
 
-	// Stable object reference for dangerouslySetInnerHTML to satisfy react-perf rule.
-	const htmlContent = useMemo(() => ({ __html: mfeHtml ?? "" }), [mfeHtml]);
-
+	// Handle Vike SPA navigation: route prop changed after mount.
 	useEffect(() => {
-		if (rootMountedRef.current || !wrapperRef.current) {
+		if (!hasMountedRef.current) {
 			return;
 		}
-		rootMountedRef.current = true;
+		const nav = (globalThis as unknown as Record<string, unknown>)[`__mfe_navigate__${src}`];
+		if (typeof nav === "function") {
+			(nav as (r: string) => void)(mfeRoute);
+		}
+		// oxlint-disable-next-line react-hooks/exhaustive-deps -- only route changes after mount
+	}, [mfeRoute]);
+
+	useEffect(() => {
+		if (!wrapperRef.current) {
+			return;
+		}
 
 		const wrapper = wrapperRef.current;
-		const basePath = MFE_BASE_PATHS[mfe];
 
-		/**
-		 * Mount the App component into the wrapper:
-		 *
-		 * mfeHtml && isHydration (hard refresh):
-		 *   `hydrateRoot` — DOM was written by the server. React attaches fibers and
-		 *   event handlers to the existing nodes without touching them → zero flicker.
-		 *   `hydrateRoot` is NOT subject to React 19's restriction that bans `createRoot`
-		 *   on a node with `dangerouslySetInnerHTML`; it is the intended API for this case.
-		 *
-		 * mfeHtml && !isHydration (SPA navigation):
-		 *   DOM content was placed by React's own `dangerouslySetInnerHTML` (client-side
-		 *   render), so `hydrateRoot` would fail with a diff error and `createRoot` would
-		 *   trigger React 19's restriction. Create an imperative child node that React
-		 *   never managed, clear the wrapper, and mount there.
-		 *
-		 * !mfeHtml (MFE_SSR_MODE=local / fragment server unreachable):
-		 *   Wrapper is an empty div (no dangerouslySetInnerHTML) — `createRoot` directly.
-		 */
-		const mountApp = (App: React.ComponentType<{ data?: unknown; basePath?: string }>): void => {
-			const element = <App data={mfeData ?? undefined} basePath={basePath} />;
-			if (mfeHtml && isHydration) {
-				// Hard refresh: DOM was written by the server.
-				hydrateRoot(wrapper, element);
-			} else if (mfeHtml) {
-				// SPA nav: DOM was placed by React's dangerouslySetInnerHTML.
-				// Must clear and mount onto an imperative (non-React-managed) child node.
-				const mountPoint = document.createElement("div");
-				wrapper.innerHTML = "";
-				wrapper.append(mountPoint);
-				createRoot(mountPoint).render(element);
-			} else {
-				// No SSR HTML — empty wrapper, createRoot directly.
-				createRoot(wrapper).render(element);
+		// Bubble intra-MFE navigations to the shell so the URL stays in sync.
+		const onMfeNavigate = (e: Event): void => {
+			const detail = (e as CustomEvent<string>).detail;
+			if (typeof detail === "string" && detail !== globalThis.location.pathname) {
+				globalThis.history.pushState(null, "", detail);
+				globalThis.dispatchEvent(new PopStateEvent("popstate"));
 			}
 		};
+		wrapper.addEventListener("mfe:navigate", onMfeNavigate);
 
-		// Load via Module Federation. The federation plugin is always active in
-		// the `client` environment (dev + build), so the runtime is initialized
-		// by the generated federation bootstrap before any component mounts.
-		const remoteName = MFE_REMOTES[mfe];
-		loadRemote<AppModule>(remoteName)
-			.then(remote => {
-				if (!remote?.default) {
-					return;
-				}
-				mountApp(remote.default);
-			})
-			.catch(console.error);
-		// mfe is fixed per render; mfeData intentionally excluded —
-		// re-mounting on data change would tear down and recreate the React root.
-		// oxlint-disable-next-line react-hooks/exhaustive-deps -- caller-controlled deps, static mfe
-	}, [mfe]);
+		injectMfeScript(src);
 
-	// Always render dangerouslySetInnerHTML when mfeHtml is present.
-	// This ensures the server and client produce identical HTML (no hydration mismatch).
-	// The useEffect then decides between hydrateRoot (hard refresh) or the imperative
-	// mountPoint + createRoot approach (SPA nav) based on isHydration — client-only.
-	// suppressHydrationWarning: the inner HTML is a foreign React tree — the shell
-	// should not validate it during its own hydration pass.
-	if (mfeHtml) {
+		// Poll for the MFE mount function registered by the injected script.
+		const mountKey = `__mfe_mount__${src}`;
+		const poll = setInterval(() => {
+			const mount = (globalThis as unknown as Record<string, unknown>)[mountKey];
+			if (typeof mount !== "function") {
+				return;
+			}
+			clearInterval(poll);
+			(mount as MfeMount)(wrapper, {
+				data: ssrData ?? undefined,
+				route: mfeRoute,
+				mountPath: resolvedMountPath,
+				ssrHtml: isHydration ? ssrHtml : null,
+				isHydration,
+			});
+			hasMountedRef.current = true;
+		}, 20);
+
+		return () => {
+			clearInterval(poll);
+			wrapper.removeEventListener("mfe:navigate", onMfeNavigate);
+		};
+		// oxlint-disable-next-line react-hooks/exhaustive-deps -- mount effect runs once
+	}, [src, ssrData, ssrHtml, isHydration, mfeRoute, resolvedMountPath]);
+
+	if (ssrHtml && (globalThis.window === undefined || isHydration)) {
 		return (
 			<div
 				ref={wrapperRef}
-				// oxlint-disable-next-line react/no-danger -- intentional: embedding MFE SSR fragment HTML
+				// oxlint-disable-next-line react/no-danger -- intentional: MFE SSR fragment HTML
 				dangerouslySetInnerHTML={htmlContent}
 				suppressHydrationWarning
 			/>

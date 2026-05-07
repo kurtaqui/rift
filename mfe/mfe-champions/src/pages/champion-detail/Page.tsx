@@ -12,8 +12,9 @@ const SLOT_LABEL: Record<string, string> = {
 	R: "Ultimate",
 };
 
-export default function Page({ data: dataProp }: { data?: unknown }) {
+export default function Page({ data: dataProp, basePath = "" }: { data?: unknown; basePath?: string }) {
 	const hookData = useData<Data>();
+	const championsHref = basePath === "" || basePath === "/" ? "/" : basePath.replace(/\/+$/, "");
 	// dataProp is typed `unknown` at the MFE boundary. If it's a non-null object,
 	// treat it as the expected Data shape (passed from App.tsx or MfeSlot).
 	const champion: Data =
@@ -36,7 +37,7 @@ export default function Page({ data: dataProp }: { data?: unknown }) {
 		<div>
 			{/* Breadcrumb */}
 			<nav className="mb-6 text-sm text-muted-foreground">
-				<a href="/champions" className="hover:text-foreground transition-colors">
+				<a href={championsHref} className="hover:text-foreground transition-colors">
 					Champions
 				</a>
 				<span className="mx-2">/</span>

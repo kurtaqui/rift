@@ -1,10 +1,11 @@
 import { MfeSlot } from "@rift/mfe-fragment/client";
-import type { MfeFragmentData } from "@rift/mfe-fragment/client";
 import { useData } from "vike-react/useData";
 import { usePageContext } from "vike-react/usePageContext";
 
+import type { TierListData } from "./+data";
+
 export default function Page(): React.JSX.Element {
-	const { mfeHtml, mfeData } = useData<MfeFragmentData>();
+	const { mfeHtml, mfeData, mfeSrc, pageContext } = useData<TierListData>();
 	const { isHydration } = usePageContext();
-	return <MfeSlot mfe="tier-list" mfeHtml={mfeHtml} mfeData={mfeData} isHydration={isHydration} />;
+	return <MfeSlot src={mfeSrc} pageContext={{ ...pageContext, isHydration }} ssrHtml={mfeHtml} ssrData={mfeData} />;
 }

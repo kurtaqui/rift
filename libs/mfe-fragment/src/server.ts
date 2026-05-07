@@ -1,122 +1,98 @@
-export type MfeTarget = "champions" | "tier-list";
-
 export type MfeFragmentResult = {
 	html: string | null;
 	data: unknown;
 };
 
+function toPathname(route: string): string {
+	try {
+		return new URL(route).pathname || "/";
+	} catch {
+		return route || "/";
+	}
+}
+
+export function inferMountPath(route: string): string {
+	const pathname = toPathname(route);
+	const firstSegment = pathname.split("/").find(Boolean);
+	return firstSegment ? `/${firstSegment}` : "/";
+}
+
+export function toMfeRoute(route: string, mountPath: string): string {
+	const pathname = toPathname(route);
+
+	if (mountPath === "/") {
+		return pathname || "/";
+	}
+
+	if (pathname === mountPath) {
+		return "/";
+	}
+
+	if (pathname.startsWith(`${mountPath}/`)) {
+		return pathname.slice(mountPath.length) || "/";
+	}
+
+	return pathname || "/";
+}
+
+export type ResolvedMfePath = {
+	mountPath: string;
+	route: string;
+};
+
+export function resolveMfePath(pathname: string): ResolvedMfePath {
+	const mountPath = inferMountPath(pathname);
+	const route = toMfeRoute(pathname, mountPath);
+	return { mountPath, route };
+}
+
 export class MfeFragmentError extends Error {
-	readonly mfe: MfeTarget;
+	readonly src: string;
 	readonly fragmentUrl: string;
 
-	constructor(mfe: MfeTarget, url: string, cause: unknown) {
-		super(`MFE fragment fetch failed for "${mfe}" at "${url}": ${String(cause)}`);
+	constructor(src: string, url: string, cause: unknown) {
+		super(`MFE fragment fetch failed at "${url}": ${String(cause)}`);
 		this.name = "MfeFragmentError";
-		this.mfe = mfe;
+		this.src = src;
 		this.fragmentUrl = url;
 		this.cause = cause;
 	}
 }
 
-const MFE_BASE_URLS: Record<MfeTarget, () => string> = {
-	champions: () => process.env["MFE_CHAMPIONS_URL"] ?? "http://localhost:3011",
-	"tier-list": () => process.env["MFE_TIER_LIST_URL"] ?? "http://localhost:3012",
-};
-
 /**
- * Shell URL prefix for each MFE. The fragment server serves pages at MFE-root-
- * relative paths (e.g. `/`, `/:id`). This prefix is stripped before building
- * the fragment request URL so shell `/champions/ahri` becomes `/ahri` on the
- * MFE fragment server.
- */
-const MFE_BASE_PATHS: Record<MfeTarget, string> = {
-	champions: "/champions",
-	"tier-list": "/tier-list",
-};
-
-/**
- * Extract just the pathname from a URL string, normalizing Vike internals:
- *   - Strips the scheme/host when a full URL is passed
- *   - Strips `.pageContext.json` (the SPA pageContext fetch suffix)
- *   - Strips the trailing `/index` that Vike appends before `.pageContext.json`
- *     e.g. `/champions/index.pageContext.json` → `/champions`
- *          `/champions/ahri/index.pageContext.json` → `/champions/ahri`
- */
-function toPathname(url: string): string {
-	let pathname = url;
-	try {
-		pathname = new URL(url).pathname;
-	} catch {
-		// already a relative path
-	}
-	// Strip Vike's pageContext suffix first, then the /index it inserts.
-	pathname = pathname.replace(/\.pageContext\.[a-z]+$/, "");
-	pathname = pathname.replace(/\/index$/, "") || "/";
-	return pathname;
-}
-
-/**
- * Strip the MFE's shell prefix from a pathname, returning an MFE-root-relative path.
- *   "/champions"       → "/"
- *   "/champions/ahri"  → "/ahri"
- *   "/tier-list"       → "/"
- */
-function toMfePathname(mfe: MfeTarget, shellPathname: string): string {
-	const base = MFE_BASE_PATHS[mfe];
-	const stripped = shellPathname.startsWith(base) ? shellPathname.slice(base.length) : shellPathname;
-	return stripped || "/";
-}
-
-/**
- * Fetch a server-rendered HTML fragment + page data from an MFE fragment server.
+ * Fetch SSR HTML + data from an MFE fragment endpoint.
  *
- * Returns `{ html: null, data: null }` when:
- * - `MFE_SSR_MODE=local` is set (explicit local-dev bypass), OR
- * - The MFE fragment server is unreachable (connection refused) — falls back to
- *   client-side rendering with a console warning instead of crashing the shell.
+ * @param src      Base URL of the MFE server, e.g. `http://localhost:3011`
+ * @param route    MFE-relative path, e.g. `/` or `/ahri`
+ * @param basePath Shell mount path, e.g. `/champions`
  *
- * Throws `MfeFragmentError` for non-network errors (HTTP 4xx/5xx, malformed
- * response) so the shell's Vike error boundary can surface them.
+ * Returns `{ html: null, data: null }` when the server is unreachable so the
+ * shell degrades to client-side rendering instead of crashing.
+ * Throws `MfeFragmentError` for HTTP 4xx/5xx responses.
  */
-export async function fetchMfeFragment(mfe: MfeTarget, url: string): Promise<MfeFragmentResult> {
-	if (process.env["MFE_SSR_MODE"] === "local") {
-		return { html: null, data: null };
-	}
-
-	const pathname = toPathname(url);
-	const mfePathname = toMfePathname(mfe, pathname);
-	const baseUrl = MFE_BASE_URLS[mfe]();
-	const endpoint = `${baseUrl}/fragment?url=${encodeURIComponent(mfePathname)}`;
+export async function fetchMfeFragment(src: string, route: string, basePath = ""): Promise<MfeFragmentResult> {
+	const endpoint = `${src}/fragment?route=${encodeURIComponent(route)}&basePath=${encodeURIComponent(basePath)}`;
 
 	try {
 		const res = await fetch(endpoint);
 		if (!res.ok) {
-			throw new MfeFragmentError(mfe, endpoint, new Error(`HTTP ${res.status} ${res.statusText}`));
+			throw new MfeFragmentError(src, endpoint, new Error(`HTTP ${res.status} ${res.statusText}`));
 		}
 		return (await res.json()) as MfeFragmentResult;
 	} catch (error) {
 		if (error instanceof MfeFragmentError) {
 			throw error;
 		}
-		// Network-level failure (ECONNREFUSED, DNS, etc.) — MFE server not running.
-		// Degrade gracefully to client-only rendering rather than crashing the shell.
-		console.warn(`[mfe-fragment] ${mfe} fragment server unreachable (${baseUrl}), falling back to CSR.`);
+		console.warn(`[mfe-fragment] fragment server unreachable (${src}), falling back to CSR.`);
 		return { html: null, data: null };
 	}
 }
 
 /**
- * Extract the inner app HTML from a full Vike document using comment markers.
- * Fallback utility for MFEs that do not yet have a custom `onRenderHtml`.
- * The primary path is the custom `onRenderHtml` from `@rift/mfe-fragment/renderer`.
+ * Resolve mountPath + MFE-relative route from a shell pathname, then fetch
+ * SSR HTML + data from the fragment endpoint.
  */
-export function extractMfeFragment(html: string): string {
-	const START = "<!--mfe-fragment-start-->";
-	const END = "<!--mfe-fragment-end-->";
-	const start = html.indexOf(START);
-	const end = html.indexOf(END);
-	if (start === -1 || end === -1) {
-		return html;
-	}
-	return html.slice(start + START.length, end);
+export async function fetchMfeFragmentForPathname(src: string, pathname: string): Promise<MfeFragmentResult> {
+	const { mountPath, route } = resolveMfePath(pathname);
+	return fetchMfeFragment(src, route, mountPath);
 }

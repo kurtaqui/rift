@@ -1,11 +1,20 @@
 # rift — MFE Architecture Rework Plan
 
-> Status: **Proposal / RFC**. Supersedes the original `setup-plan.md` Phase 2.
+> Status: **Implemented**. This document reflects the architecture as built
+> on the `feature/vike-indep` branch. It supersedes the original
+> `setup-plan.md` Phase 2.
 > Goal: rework the current "N independent Vike apps with their own servers and
 > hardcoded `<a href>` cross-app links" into a true micro-frontend architecture
 > with **one shell server**, **shared bundles for horizontal MFEs**, **SSR +
 > hydration end-to-end**, and **one vertical MFE on a different stack** as a
 > showcase.
+>
+> **April–May 2026 update:** Phases A–C (API, server consolidation, in-tree
+> page wiring) were completed as planned. Phase D (Module Federation) was
+> explored but ultimately **replaced** by a simpler **HTTP composition**
+> approach — see [§3b](#3b-implemented-http-composition-mfe-pattern) for the
+> final architecture. Module Federation is still documented below as the
+> original plan; sections marked ✅ / ⚠️ reflect their current status.
 
 ---
 
@@ -186,6 +195,156 @@
   stays inside the custom element and never round-trips Vike. Cross-vertical
   navigation (e.g. `/player` → `/champions`) goes through Vike client
   routing — no full reload needed since the shell hosts both.
+
+---
+
+## 3b. Implemented: HTTP Composition MFE Pattern
+
+> **This section documents what was actually built.** The Module Federation
+> approach described in §3 and §6–§8 was explored but replaced with the
+> simpler HTTP composition model below. Both patterns are retained here as
+> architectural reference.
+
+### Motivation for the change
+
+After landing Phase D-A (Module Federation client-only build), several
+friction points emerged:
+
+- `@module-federation/vite` + Vike SSR produced React runtime mismatches —
+  the shell's React and the remote's React were different instances, breaking
+  hooks (`useRef` → null, hydration error #418).
+- The `mfeBareNameAliasPlugin`, `isFragment` Vike flag, and comment-marker
+  extraction were complex workarounds that added fragility.
+- The "one shell, pages imported from MFE packages" model required each MFE
+  to still build before the shell could SSR — negating some of the
+  "independent deploy" value.
+
+The decision: drop Module Federation, give each horizontal MFE its own Vike
+server (lightweight Hono + Vike), and have the shell compose their rendered
+output at request time via HTTP.
+
+### Runtime architecture
+
+```
+┌─────────────────────────────────────┐     ┌──────────────────┐
+│  apps/shell  (Vike + Hono)  :3000   │     │  apps/api  :3100 │
+│  • Auth.js + Vike SSR               │────▶│  Hono + Drizzle  │
+│  • /champions/* → MfeSlot           │     │  SQLite          │
+│  • /tier-list/* → MfeSlot           │     └──────────────────┘
+└─────────────────────────────────────┘
+         │  GET /fragment?route=…  (SSR)
+         │  <script src=".../mfe.js"> (client)
+         ▼
+┌───────────────────────┐   ┌───────────────────────┐
+│  mfe-champions  :3011 │   │  mfe-tier-list  :3012  │
+│  Hono + Vike          │   │  Hono + Vike           │
+│  GET /fragment        │   │  GET /fragment         │
+│  GET /mfe.js          │   │  GET /mfe.js           │
+│  (full Vike dev UX)   │   │  (full Vike dev UX)    │
+└───────────────────────┘   └───────────────────────┘
+```
+
+### Fragment contract (`GET /fragment?route=`)
+
+Each horizontal MFE exposes a single HTTP endpoint that the shell's Vike
+`+data.ts` calls server-side on every SSR request:
+
+```
+GET http://localhost:3011/fragment?route=/ahri
+→ 200 { "html": "<div>...</div>", "data": { "champion": { ... } } }
+```
+
+- `html` — fully-rendered React string (via `renderToPipeableStream`). Inlined
+  into the shell's `<MfeSlot>` container during SSR.
+- `data` — serializable page data forwarded to the client for hydration.
+  The MFE App receives this instead of re-fetching on mount.
+
+### `<MfeSlot>` component (`libs/mfe-fragment/src/client.tsx`)
+
+The shell never renders MFE components itself. It uses `<MfeSlot>`, a generic
+React component that:
+
+1. **SSR phase** — renders `ssrHtml` inside a `<div>` using
+   `dangerouslySetInnerHTML`. No MFE code runs on the shell server.
+2. **Hydration phase** — injects `<script type="module" src="${src}/mfe.js">`
+   (or `${src}/src/client-entry.ts` in dev for source maps). Polls
+   `globalThis.__mfe_mount__<origin>` until the script registers it, then
+   calls `mount(container, { data, route, mountPath, ssrHtml, isHydration })`.
+3. **SPA navigation** — when Vike client-routes to a new sub-path, `+data.ts`
+   re-fetches and `MfeSlot` re-calls `mount()`. The MFE's idempotent root
+   reuse (WeakMap-based) calls `root.render()` instead of remounting.
+
+Route stripping is handled by `toMfeRoute(route, mountPath)`:
+
+```ts
+// shell route "/champions/ahri" with mountPath="/champions" → "/ahri"
+// shell route "/tier-list" with mountPath="/tier-list" → "/"
+```
+
+Props:
+
+| Prop         | Type      | Description                                         |
+| ------------ | --------- | --------------------------------------------------- |
+| `src`        | `string`  | MFE server base URL, e.g. `http://localhost:3011`   |
+| `pageContext`| object    | `{ route, mountPath?, isHydration? }`               |
+| `ssrHtml`    | `string\|null` | SSR HTML from `/fragment`. `null` = CSR-only   |
+| `ssrData`    | `unknown` | Data from `/fragment`, forwarded to App on hydrate  |
+
+### MFE client bundle contract (`__mfe_mount__`)
+
+Each MFE's `src/client-entry.ts` builds into `dist/client/mfe.js` and
+registers a global on load:
+
+```ts
+// Idempotent React root reuse — safe to call on every Vike SPA nav
+const ROOTS = new WeakMap<HTMLElement, Root>();
+
+Object.assign(globalThis, {
+  [`__mfe_mount__${origin}`]: (container, { data, route, mountPath, ssrHtml, isHydration }) => {
+    const element = createElement(App, { data, route, mountPath });
+    const existing = ROOTS.get(container);
+    if (existing) {
+      existing.render(element);
+    } else if (ssrHtml && isHydration) {
+      ROOTS.set(container, hydrateRoot(container, element));
+    } else {
+      if (ssrHtml) container.innerHTML = "";
+      const root = createRoot(container);
+      ROOTS.set(container, root);
+      root.render(element);
+    }
+  },
+});
+```
+
+Additionally, `mfe-champions` registers `__mfe_navigate__<origin>` so the
+shell can call into the MFE's MemoryRouter when Vike navigates between
+sub-routes without triggering a full SSR fetch.
+
+### Dev vs prod script injection
+
+| Mode  | Injected script                     | Why                                   |
+| ----- | ----------------------------------- | ------------------------------------- |
+| Dev   | `${src}/src/client-entry.ts`        | Vite dev server serves with source maps |
+| Prod  | `${src}/mfe.js`                     | Pre-built lib bundle from `vite.client.config.ts` |
+
+`vite.client.config.ts` in each horizontal MFE:
+- `define: { "process.env.NODE_ENV": JSON.stringify("production") }` — prevents
+  `process is not defined` and avoids loading the dev React build in prod.
+- Builds a standalone ES module with React bundled (no shared deps needed —
+  each MFE owns its own React instance and there is no shell integration at
+  bundle level).
+
+### Navigation
+
+- **Shell → MFE page**: Vike SPA nav via `<Link>` / `navigate()`. The shell's
+  `+data.ts` re-fetches `/fragment?route=<mfe-sub-route>`. `MfeSlot` remounts
+  with new data.
+- **Intra-MFE navigation** (champions list → detail): `mfe-champions`
+  dispatches a `mfe:navigate` custom event which the shell listens to and
+  forwards to Vike's `navigate()`. This keeps the shell URL in sync and
+  triggers a fresh SSR fetch + `mount()` cycle.
+- **Cross-MFE navigation** (champions → tier-list): standard Vike `<Link>`.
 
 ---
 
@@ -720,19 +879,15 @@ live in their own packages and are imported.
 - C.0c. Verify: navigation between champions and tier-list uses Vike Client
   Routing — no full reload.
 
-### Phase D — Introduce Module Federation for horizontal MFEs
+### Phase D — HTTP Composition for horizontal MFEs (implemented)
 
-> **Implementation note (April 2026):** Phase D is split into two sub-phases.
-> **D-A** lands first as a low-risk client-only setup; **D-B** is the harder
-> SSR-dynamic flow that we'll attempt only once D-A is stable.
+> **Status (May 2026): Replaced Module Federation.** Phase D-A (client-only
+> MF) was partially implemented (D-A.1–D-A.4, D-A.6 ✅) but replaced by the
+> HTTP composition approach described in [§3b](#3b-implemented-http-composition-mfe-pattern).
+> The Module Federation wiring has been removed from the codebase.
+> The steps below are retained as historical record.
 
-#### Phase D-A — Client-only Module Federation
-
-Outcome: horizontal MFEs are independently buildable & deployable for the
-**client** bundle. Shell SSR continues to import MFE pages in-tree (via the
-package `exports` map wired up in Phase C) so the rendered HTML is unchanged
-from a user's perspective. Redeploying an MFE updates only the post-hydration
-JavaScript — a new SSR-only field still requires a shell rebuild.
+#### Phase D-A — Client-only Module Federation (superseded)
 
 - ✅ D-A.1. Add `@module-federation/vite` to shell + horizontal MFE
   `vite.config.ts`. (Catalog entry added; per-MFE `vite.config.ts` created.)

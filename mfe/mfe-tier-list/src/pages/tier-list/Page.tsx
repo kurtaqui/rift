@@ -73,6 +73,7 @@ export default function Page({ data: dataProp }: { data?: unknown }) {
 
 			<TierListFilters patches={patches} />
 
+			<h1>test</h1>
 			{filtered.length === 0 ? (
 				<p className="text-center text-muted-foreground py-16">No champions match these filters.</p>
 			) : (

@@ -21,21 +21,40 @@
       "outputs": ["{projectRoot}/dist"],
       "dependsOn": ["^build"]
     },
-    "build:watch": {
+    "build:client": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm build:watch",
+        "command": "pnpm build:client",
         "cwd": "mfe/mfe-tier-list"
       },
-      "outputs": ["{projectRoot}/dist"]
+      "outputs": ["{projectRoot}/dist/client"],
+      "dependsOn": ["^build"]
+    },
+    "dev:client": {
+      "executor": "nx:run-commands",
+      "continuous": true,
+      "options": {
+        "command": "pnpm build:client:watch",
+        "cwd": "mfe/mfe-tier-list"
+      },
+      "outputs": ["{projectRoot}/dist/client"]
     },
     "preview": {
       "executor": "nx:run-commands",
+      "continuous": true,
       "options": {
         "command": "pnpm preview",
         "cwd": "mfe/mfe-tier-list"
       },
       "dependsOn": ["build"]
+    },
+    "build:preview": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm build:preview",
+        "cwd": "mfe/mfe-tier-list"
+      },
+      "outputs": ["{projectRoot}/dist"]
     },
     "lint": {
       "executor": "nx:run-commands",

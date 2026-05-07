@@ -13,8 +13,10 @@
   "scripts": {
     "dev": "vike dev",
     "build": "vite build",
-    "build:watch": "node build-watch.mjs",
-    "preview": "vite preview",
+    "build:client": "vite build --config vite.client.config.ts",
+    "build:client:watch": "node build-watch.mjs",
+    "build:preview": "vite build && node --env-file=.env ./dist/server/index.mjs",
+    "preview": "node --env-file=.env ./dist/server/index.mjs",
     "lint": "oxlint --type-aware ."
   },
   "dependencies": {
@@ -32,7 +34,6 @@
     "vike-react": "catalog:"
   },
   "devDependencies": {
-    "@module-federation/vite": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

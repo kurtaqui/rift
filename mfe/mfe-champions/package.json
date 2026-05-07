@@ -15,7 +15,9 @@
   "scripts": {
     "dev": "vike dev",
     "build": "vite build",
-    "preview": "vite preview",
+    "build:client": "vite build --config vite.client.config.ts",
+    "build:client:watch": "node build-watch.mjs",
+    "preview": "node --env-file=.env ./dist/server/index.mjs",
     "lint": "oxlint --type-aware ."
   },
   "dependencies": {
@@ -33,7 +35,6 @@
     "vike-react": "catalog:"
   },
   "devDependencies": {
-    "@module-federation/vite": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

@@ -3,22 +3,23 @@ import { useData } from "vike-react/useData";
 
 import type { Data } from "./data";
 
-export default function Page({ data: dataProp }: { data?: unknown }) {
+export default function Page({ data: dataProp, basePath = "" }: { data?: unknown; basePath?: string }) {
 	const hookData = useData<Data>();
+	const normalizedBasePath = basePath === "/" ? "" : basePath.replace(/\/+$/, "");
+
 	// dataProp is typed `unknown` at the MFE boundary. If it's a non-null object,
 	// treat it as the expected Data shape (passed from App.tsx or MfeSlot).
 	const resolved: Data =
 		dataProp !== undefined && dataProp !== null && typeof dataProp === "object"
 			? // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- object-guard above makes this safe
 				(dataProp as unknown as Data)
-			: hookData; // Guard: fragment server unreachable and no Vike context (e.g. devLoader without data).
+			: hookData;
+	// Guard: fragment server unreachable and no Vike context (e.g. devLoader without data).
 	// todo: return 404
 	if (!resolved) {
 		return null;
 	}
 	const { champions } = resolved;
-
-	console.warn(">>>> champion list loaded");
 
 	return (
 		<div>
@@ -33,7 +34,7 @@ export default function Page({ data: dataProp }: { data?: unknown }) {
 				{champions.map(champion => (
 					<a
 						key={champion.id}
-						href={`/champions/${champion.id}`}
+						href={`${normalizedBasePath}/${champion.id}`}
 						className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg">
 						<LolChampionCard
 							name={champion.name}

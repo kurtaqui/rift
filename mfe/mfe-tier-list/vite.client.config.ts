@@ -1,38 +1,41 @@
 import react from "@vitejs/plugin-react-oxc";
 import path from "node:path";
-import vike from "vike/plugin";
 import { defineConfig } from "vite";
 
 /**
- * `mfe-tier-list` — same architecture as `mfe-champions`.
- * SSR fragment server on :3012 + standalone client bundle (`mfe.js`).
- * See `mfe-champions/vite.config.ts` for the full description.
+ * Vite config for building the mfe-tier-list standalone client bundle (`mfe.js`).
+ * See `mfe-champions/vite.client.config.ts` for the full description.
  */
 export default defineConfig({
 	base: "/",
-	plugins: [vike(), react()],
+	define: {
+		"process.env.NODE_ENV": JSON.stringify("production"),
+	},
+	plugins: [react()],
 	resolve: {
 		alias: [
 			{ find: "@rift/ui/dist/components", replacement: path.resolve(__dirname, "../../libs/ui/dist/components") },
 			{ find: /^@rift\/ui$/, replacement: path.resolve(__dirname, "../../libs/ui/src/index.ts") },
 			{ find: "@rift/champion", replacement: path.resolve(__dirname, "../../libs/champion/src/index.ts") },
 			{ find: "@rift/data-access", replacement: path.resolve(__dirname, "../../libs/data-access/src/index.ts") },
-			{ find: "@rift/mfe-fragment/server", replacement: path.resolve(__dirname, "../../libs/mfe-fragment/src/server.ts") },
-			{ find: "@rift/mfe-fragment/client", replacement: path.resolve(__dirname, "../../libs/mfe-fragment/src/client.tsx") },
 		],
 	},
 	build: {
 		target: "esnext",
-		minify: true,
-		cssCodeSplit: false,
+		lib: {
+			entry: path.resolve(__dirname, "src/client-entry.ts"),
+			formats: ["es"],
+			fileName: () => "mfe.js",
+		},
+		outDir: "dist/client",
+		emptyOutDir: false,
+		rollupOptions: {
+			external: [],
+		},
 	},
 	server: {
 		port: 3012,
 		strictPort: true,
 		cors: true,
-	},
-	preview: {
-		port: 3012,
-		strictPort: true,
 	},
 });
