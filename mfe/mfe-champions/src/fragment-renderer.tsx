@@ -3,7 +3,6 @@ import { Writable } from "node:stream";
 import { renderToPipeableStream } from "react-dom/server";
 
 import App from "./App";
-import { championDetailQueryOptions } from "./pages/champion-detail/data";
 import { championsListQueryOptions } from "./pages/champions-list/data";
 
 export type FragmentResult = {
@@ -40,19 +39,12 @@ async function renderToString(element: React.ReactElement): Promise<string> {
  * cache as `transferState` for the shell to pass to the client-side QueryClient.
  *
  * @param route     MFE-root path, e.g. `/` (list) or `/ahri` (detail).
- * @param basePath  Shell mount path, e.g. `/champions`.
+ * @param basePath  Shell mount path, e.g. `/champions` or `/` for home.
  */
 export async function renderFragment(route: string, basePath = ""): Promise<FragmentResult> {
 	const queryClient = new QueryClient({
 		defaultOptions: { queries: { staleTime: Infinity } },
 	});
-
-	if (route === "/" || route === "") {
-		await queryClient.prefetchQuery(championsListQueryOptions());
-	} else {
-		const id = route.replace(/^\//, "");
-		await queryClient.prefetchQuery(championDetailQueryOptions(id));
-	}
 
 	const html = await renderToString(
 		<QueryClientProvider client={queryClient}>

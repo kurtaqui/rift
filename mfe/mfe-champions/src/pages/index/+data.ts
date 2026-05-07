@@ -1,2 +1,7 @@
-export { data } from "../champions-list/data";
-export type { Data } from "../champions-list/data";
+// Home page has no server-side data — Marketing is static and Dashboard
+// is client-side-only (requires browser auth session check).
+export type Data = Record<string, never>;
+
+export function data(): Data {
+	return {};
+}

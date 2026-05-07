@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from
 import { registerNavigate } from "./navigate-bridge";
 import ChampionDetailPage from "./pages/champion-detail/Page";
 import ChampionsListPage from "./pages/champions-list/Page";
+import HomePage from "./pages/home/Page";
 
 type AppProps = {
 	/** Shell mount path for this MFE, e.g. `/champions`. */
@@ -98,7 +99,9 @@ function IntraMfeAnchorInterceptor({ basePath = "" }: { basePath?: string }): nu
 		};
 
 		document.addEventListener("click", onClick);
-		return () => document.removeEventListener("click", onClick);
+		return () => {
+			document.removeEventListener("click", onClick);
+		};
 	}, [basePath, navigate]);
 
 	return null;
@@ -140,8 +143,14 @@ export default function App({ basePath, mfeOrigin, route }: AppProps) {
 			<IntraMfeAnchorInterceptor basePath={basePath} />
 			<Suspense fallback={null}>
 				<Routes>
-					<Route path="/:id" element={<DetailRoute basePath={basePath} />} />
-					<Route path="/" element={<ChampionsListPage basePath={basePath} />} />
+					{basePath === "/" || basePath === "" ? (
+						<Route path="/" element={<HomePage basePath={basePath} />} />
+					) : (
+						<>
+							<Route path="/:id" element={<DetailRoute basePath={basePath} />} />
+							<Route path="/" element={<ChampionsListPage basePath={basePath} />} />
+						</>
+					)}
 				</Routes>
 			</Suspense>
 		</MemoryRouter>
