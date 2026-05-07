@@ -4,7 +4,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { championsListQueryOptions } from "./data";
 
 export default function Page({ basePath = "" }: { basePath?: string }) {
-	console.warn(">>>> render champion list page"); // DEBUG
 	const { data: resolved } = useSuspenseQuery(championsListQueryOptions());
 	const normalizedBasePath = basePath === "/" ? "" : basePath.replace(/\/+$/, "");
 	const { champions } = resolved;

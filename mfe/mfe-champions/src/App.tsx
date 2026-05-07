@@ -27,7 +27,8 @@ function ShellRouteSync({ basePath = "", mfeOrigin }: { basePath?: string; mfeOr
 		}
 
 		const normalizedBasePath = basePath === "" || basePath === "/" ? "" : basePath.replace(/\/+$/, "");
-		const nextPath = location.pathname === "/" ? normalizedBasePath || "/" : `${normalizedBasePath}${location.pathname}`;
+		const nextPath =
+			location.pathname === "/" ? normalizedBasePath || "/" : `${normalizedBasePath}${location.pathname}`;
 		const emit = (globalThis as Record<string, unknown>)[`__mfe_emit_navigate__${mfeOrigin}`];
 
 		if (typeof emit === "function") {
@@ -45,7 +46,14 @@ function IntraMfeAnchorInterceptor({ basePath = "" }: { basePath?: string }): nu
 		const normalizedBasePath = basePath === "" || basePath === "/" ? "" : basePath.replace(/\/+$/, "");
 
 		const onClick = (event: MouseEvent): void => {
-			if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+			if (
+				event.defaultPrevented ||
+				event.button !== 0 ||
+				event.metaKey ||
+				event.ctrlKey ||
+				event.shiftKey ||
+				event.altKey
+			) {
 				return;
 			}
 
@@ -68,7 +76,10 @@ function IntraMfeAnchorInterceptor({ basePath = "" }: { basePath?: string }): nu
 				return;
 			}
 
-			if (normalizedBasePath && !(url.pathname === normalizedBasePath || url.pathname.startsWith(`${normalizedBasePath}/`))) {
+			if (
+				normalizedBasePath &&
+				!(url.pathname === normalizedBasePath || url.pathname.startsWith(`${normalizedBasePath}/`))
+			) {
 				return;
 			}
 

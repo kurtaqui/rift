@@ -1,3 +1,4 @@
+// TODO: Sync with champions client entry and create reusable utils
 import { QueryClient, QueryClientProvider, hydrate as hydrateQuery } from "@tanstack/react-query";
 import { createElement } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
@@ -24,6 +25,7 @@ Object.assign(globalThis, {
 		props: {
 			transferState?: unknown;
 			route?: string;
+			mountPath?: string;
 			ssrHtml?: string | null;
 			isHydration?: boolean;
 		},
@@ -32,8 +34,15 @@ Object.assign(globalThis, {
 			hydrateQuery(queryClient, props.transferState);
 		}
 
-		const element = createElement(QueryClientProvider, { client: queryClient }, createElement(App));
-
+		const element = createElement(
+			QueryClientProvider,
+			{ client: queryClient },
+			createElement(App, {
+				basePath: props.mountPath,
+				mfeOrigin: origin,
+				route: props.route,
+			} as React.ComponentProps<typeof App>),
+		);
 		const existingRoot = ROOTS.get(container);
 		if (existingRoot) {
 			existingRoot.render(element);
@@ -45,9 +54,6 @@ Object.assign(globalThis, {
 			ROOTS.set(container, root);
 			return;
 		}
-		if (props.ssrHtml) {
-			container.innerHTML = "";
-		}
 		const root = createRoot(container);
 		ROOTS.set(container, root);
 		root.render(element);
@@ -55,4 +61,8 @@ Object.assign(globalThis, {
 });
 
 // Tier list has no sub-routes; navigate is a no-op but kept for consistency.
-Object.assign(globalThis, { [`__mfe_navigate__${origin}`]: (_route: string) => {} });
+Object.assign(globalThis, {
+	[`__mfe_navigate__${origin}`]: (_route: string) => {
+		/* empty */
+	},
+});

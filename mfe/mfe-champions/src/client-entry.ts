@@ -54,16 +54,13 @@ Object.assign(globalThis, {
 				basePath: props.mountPath,
 				mfeOrigin: origin,
 				route: props.route,
-			}),
+			} as React.ComponentProps<typeof App>),
 		);
 
 		if (props.ssrHtml && props.isHydration) {
 			const root = hydrateRoot(container, element);
 			ROOTS.set(container, root);
 			return;
-		}
-		if (props.ssrHtml) {
-			container.innerHTML = "";
 		}
 		const root = createRoot(container);
 		ROOTS.set(container, root);

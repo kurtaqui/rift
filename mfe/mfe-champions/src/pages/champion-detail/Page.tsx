@@ -13,7 +13,6 @@ const SLOT_LABEL: Record<string, string> = {
 };
 
 export default function Page({ id, basePath = "" }: { id: string; basePath?: string }) {
-	console.warn(">>>> render champion detail page", { id }); // DEBUG
 	const { data: champion } = useSuspenseQuery(championDetailQueryOptions(id));
 	const championsHref = basePath === "" || basePath === "/" ? "/" : basePath.replace(/\/+$/, "");
 
