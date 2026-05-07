@@ -1,12 +1,13 @@
+import { QueryClient, QueryClientProvider, dehydrate } from "@tanstack/react-query";
 import { Writable } from "node:stream";
 import { renderToPipeableStream } from "react-dom/server";
 
 import App from "./App";
-import { data as tierData } from "./pages/tier-list/data";
+import { tierListQueryOptions } from "./pages/tier-list/data";
 
 export type FragmentResult = {
 	html: string;
-	data: unknown;
+	transferState: unknown;
 };
 
 async function renderToString(element: React.ReactElement): Promise<string> {
@@ -33,11 +34,21 @@ async function renderToString(element: React.ReactElement): Promise<string> {
 /**
  * Render the tier-list MFE to HTML.
  *
- * Uses renderToPipeableStream so react-router-dom v7's internal Suspense
- * boundaries are flushed correctly.
+ * Creates a per-request QueryClient, prefetches tier-list data so it is in the
+ * cache before rendering (no suspension), then returns the dehydrated cache as
+ * `transferState` for the shell to pass to the client-side QueryClient.
  */
 export async function renderFragment(): Promise<FragmentResult> {
-	const fragmentData = await tierData();
-	const html = await renderToString(<App data={fragmentData} />);
-	return { html, data: fragmentData };
+	const queryClient = new QueryClient({
+		defaultOptions: { queries: { staleTime: Infinity } },
+	});
+
+	await queryClient.prefetchQuery(tierListQueryOptions());
+
+	const html = await renderToString(
+		<QueryClientProvider client={queryClient}>
+			<App />
+		</QueryClientProvider>,
+	);
+	return { html, transferState: dehydrate(queryClient) };
 }

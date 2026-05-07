@@ -1,6 +1,6 @@
 export type MfeFragmentResult = {
 	html: string | null;
-	data: unknown;
+	transferState: unknown;
 };
 
 function toPathname(route: string): string {
@@ -84,7 +84,7 @@ export async function fetchMfeFragment(src: string, route: string, basePath = ""
 			throw error;
 		}
 		console.warn(`[mfe-fragment] fragment server unreachable (${src}), falling back to CSR.`);
-		return { html: null, data: null };
+		return { html: null, transferState: null };
 	}
 }
 

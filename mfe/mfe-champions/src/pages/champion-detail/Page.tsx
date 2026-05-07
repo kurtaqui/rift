@@ -1,6 +1,6 @@
-import { useData } from "vike-react/useData";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
-import type { Data } from "./data";
+import { championDetailQueryOptions } from "./data";
 
 const SLOT_ORDER = ["P", "Q", "W", "E", "R"] as const;
 
@@ -12,22 +12,10 @@ const SLOT_LABEL: Record<string, string> = {
 	R: "Ultimate",
 };
 
-export default function Page({ data: dataProp, basePath = "" }: { data?: unknown; basePath?: string }) {
-	const hookData = useData<Data>();
+export default function Page({ id, basePath = "" }: { id: string; basePath?: string }) {
+	console.warn(">>>> render champion detail page", { id }); // DEBUG
+	const { data: champion } = useSuspenseQuery(championDetailQueryOptions(id));
 	const championsHref = basePath === "" || basePath === "/" ? "/" : basePath.replace(/\/+$/, "");
-	// dataProp is typed `unknown` at the MFE boundary. If it's a non-null object,
-	// treat it as the expected Data shape (passed from App.tsx or MfeSlot).
-	const champion: Data =
-		dataProp !== undefined && dataProp !== null && typeof dataProp === "object"
-			? // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- object-guard above makes this safe
-				(dataProp as unknown as Data)
-			: hookData;
-
-	// todo: return 404
-	// Guard: fragment server unreachable and no Vike context (e.g. devLoader without data).
-	if (!champion) {
-		return null;
-	}
 
 	const abilities = [...champion.abilities].toSorted((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
 

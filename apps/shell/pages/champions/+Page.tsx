@@ -5,7 +5,7 @@ import { usePageContext } from "vike-react/usePageContext";
 import type { ChampionsData } from "./+data";
 
 export default function Page(): React.JSX.Element {
-	const { mfeHtml, mfeData, mfeSrc, pageContext } = useData<ChampionsData>();
+	const { html, transferState, mfeSrc, pageContext } = useData<ChampionsData>();
 	const { isHydration } = usePageContext();
-	return <MfeSlot src={mfeSrc} pageContext={{ ...pageContext, isHydration }} ssrHtml={mfeHtml} ssrData={mfeData} />;
+	return <MfeSlot src={mfeSrc} pageContext={{ ...pageContext, isHydration }} ssrHtml={html} ssrData={transferState} />;
 }

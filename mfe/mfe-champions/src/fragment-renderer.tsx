@@ -1,13 +1,14 @@
+import { QueryClient, QueryClientProvider, dehydrate } from "@tanstack/react-query";
 import { Writable } from "node:stream";
 import { renderToPipeableStream } from "react-dom/server";
 
 import App from "./App";
-import { fetchChampionDetail as detailData } from "./pages/champion-detail/data";
-import { data as listData } from "./pages/champions-list/data";
+import { championDetailQueryOptions } from "./pages/champion-detail/data";
+import { championsListQueryOptions } from "./pages/champions-list/data";
 
 export type FragmentResult = {
 	html: string;
-	data: unknown;
+	transferState: unknown;
 };
 
 async function renderToString(element: React.ReactElement): Promise<string> {
@@ -34,22 +35,29 @@ async function renderToString(element: React.ReactElement): Promise<string> {
 /**
  * Render the champions MFE to HTML for a given MFE-relative route.
  *
- * Uses renderToPipeableStream so react-router-dom v7's internal Suspense
- * boundaries are flushed correctly. renderToString throws on Suspense.
+ * Creates a per-request QueryClient, prefetches the data for the route so it
+ * is in the cache before rendering (no suspension), then returns the dehydrated
+ * cache as `transferState` for the shell to pass to the client-side QueryClient.
  *
  * @param route     MFE-root path, e.g. `/` (list) or `/ahri` (detail).
  * @param basePath  Shell mount path, e.g. `/champions`.
  */
 export async function renderFragment(route: string, basePath = ""): Promise<FragmentResult> {
-	let fragmentData: unknown = null;
+	const queryClient = new QueryClient({
+		defaultOptions: { queries: { staleTime: Infinity } },
+	});
 
 	if (route === "/" || route === "") {
-		fragmentData = await listData();
+		await queryClient.prefetchQuery(championsListQueryOptions());
 	} else {
 		const id = route.replace(/^\//, "");
-		fragmentData = await detailData(id);
+		await queryClient.prefetchQuery(championDetailQueryOptions(id));
 	}
 
-	const html = await renderToString(<App route={route} basePath={basePath} data={fragmentData} />);
-	return { html, data: fragmentData };
+	const html = await renderToString(
+		<QueryClientProvider client={queryClient}>
+			<App route={route} basePath={basePath} />
+		</QueryClientProvider>,
+	);
+	return { html, transferState: dehydrate(queryClient) };
 }

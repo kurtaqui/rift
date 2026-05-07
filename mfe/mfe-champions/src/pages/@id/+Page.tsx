@@ -1,3 +1,8 @@
-// Re-export from the shared component so both the Module Federation remote
-// and the Vike fragment server use the same implementation.
-export { default } from "../champion-detail/Page";
+import { usePageContext } from "vike-react/usePageContext";
+
+import ChampionDetailPage from "../champion-detail/Page";
+
+export default function Page() {
+	const { routeParams } = usePageContext();
+	return <ChampionDetailPage id={routeParams.id ?? ""} />;
+}

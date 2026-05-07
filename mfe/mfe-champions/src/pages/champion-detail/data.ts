@@ -1,5 +1,6 @@
 import type { Champion, ChampionAbility, ChampionSkin } from "@rift/champion";
 import { createApiClient } from "@rift/data-access";
+import { queryOptions } from "@tanstack/react-query";
 import { render } from "vike/abort";
 import type { PageContextServer } from "vike/types";
 
@@ -23,9 +24,16 @@ export async function fetchChampionDetail(id: string): Promise<Data> {
 	if (!res.ok) {
 		throw new Error(`Failed to load champion ${id}: HTTP ${res.status}`);
 	}
+	// oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- res.json() returns any; shape is validated by the API contract
 	const json = (await res.json()) as { champion: Champion; abilities: ChampionAbility[]; skins: ChampionSkin[] };
 	return { ...json.champion, abilities: json.abilities, skins: json.skins };
 }
+
+export const championDetailQueryOptions = (id: string) =>
+	queryOptions({
+		queryKey: ["champion", id],
+		queryFn: async () => fetchChampionDetail(id),
+	});
 
 /** Vike page adapter — throws `render(404)` so Vike renders the 404 page. */
 export async function data(pageContext: PageContextServer): Promise<Data> {

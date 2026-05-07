@@ -8,10 +8,10 @@ export type ChampionsData = MfeShellPageData;
 
 export async function data(pageContext: PageContextServer): Promise<ChampionsData> {
 	const pathname = pageContext.urlPathname;
-	const { html: mfeHtml, data: mfeData } = await fetchMfeFragmentForPathname(MFE_CHAMPIONS_URL, pathname);
+	const { html, transferState } = await fetchMfeFragmentForPathname(MFE_CHAMPIONS_URL, pathname);
 	return {
-		mfeHtml,
-		mfeData,
+		html,
+		transferState,
 		mfeSrc: MFE_CHAMPIONS_URL,
 		pageContext: { route: pathname },
 	};

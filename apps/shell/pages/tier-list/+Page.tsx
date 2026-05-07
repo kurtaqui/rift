@@ -5,7 +5,7 @@ import { usePageContext } from "vike-react/usePageContext";
 import type { TierListData } from "./+data";
 
 export default function Page(): React.JSX.Element {
-	const { mfeHtml, mfeData, mfeSrc, pageContext } = useData<TierListData>();
+	const { html, transferState, mfeSrc, pageContext } = useData<TierListData>();
 	const { isHydration } = usePageContext();
-	return <MfeSlot src={mfeSrc} pageContext={{ ...pageContext, isHydration }} ssrHtml={mfeHtml} ssrData={mfeData} />;
+	return <MfeSlot src={mfeSrc} pageContext={{ ...pageContext, isHydration }} ssrHtml={html} ssrData={transferState} />;
 }

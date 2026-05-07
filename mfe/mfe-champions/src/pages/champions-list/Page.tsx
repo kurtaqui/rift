@@ -1,24 +1,12 @@
 import { LolChampionCard } from "@rift/ui/react";
-import { useData } from "vike-react/useData";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
-import type { Data } from "./data";
+import { championsListQueryOptions } from "./data";
 
-export default function Page({ data: dataProp, basePath = "" }: { data?: unknown; basePath?: string }) {
-	const hookData = useData<Data>();
+export default function Page({ basePath = "" }: { basePath?: string }) {
+	console.warn(">>>> render champion list page"); // DEBUG
+	const { data: resolved } = useSuspenseQuery(championsListQueryOptions());
 	const normalizedBasePath = basePath === "/" ? "" : basePath.replace(/\/+$/, "");
-
-	// dataProp is typed `unknown` at the MFE boundary. If it's a non-null object,
-	// treat it as the expected Data shape (passed from App.tsx or MfeSlot).
-	const resolved: Data =
-		dataProp !== undefined && dataProp !== null && typeof dataProp === "object"
-			? // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- object-guard above makes this safe
-				(dataProp as unknown as Data)
-			: hookData;
-	// Guard: fragment server unreachable and no Vike context (e.g. devLoader without data).
-	// todo: return 404
-	if (!resolved) {
-		return null;
-	}
 	const { champions } = resolved;
 
 	return (

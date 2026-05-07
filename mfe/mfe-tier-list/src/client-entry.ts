@@ -1,10 +1,7 @@
+import { QueryClient, QueryClientProvider, hydrate as hydrateQuery } from "@tanstack/react-query";
 import { createElement } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 
-/**
- * MFE Tier List — client bundle entry point.
- * See mfe-champions/src/client-entry.ts for the full pattern description.
- */
 import App from "./App";
 
 type MountedRoot = {
@@ -15,21 +12,27 @@ const ROOTS = new WeakMap<HTMLElement, MountedRoot>();
 
 const origin = new URL(import.meta.url).origin;
 
+const queryClient = new QueryClient({
+	defaultOptions: { queries: { staleTime: Infinity } },
+});
+
 // Register a mount function so the shell doesn't render this component with
 // its own React runtime (which causes hook/runtime mismatches).
 Object.assign(globalThis, {
 	[`__mfe_mount__${origin}`]: (
 		container: HTMLElement,
 		props: {
-			data?: unknown;
+			transferState?: unknown;
 			route?: string;
 			ssrHtml?: string | null;
 			isHydration?: boolean;
 		},
 	) => {
-		const element = createElement(App, {
-			data: props.data,
-		});
+		if (props.transferState) {
+			hydrateQuery(queryClient, props.transferState);
+		}
+
+		const element = createElement(QueryClientProvider, { client: queryClient }, createElement(App));
 
 		const existingRoot = ROOTS.get(container);
 		if (existingRoot) {

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useMemo } from "react";
 
 export type MfeFragmentData = {
-	mfeHtml: string | null;
-	mfeData: unknown;
+	html: string | null;
+	transferState: unknown;
 };
 
 export type MfeSlotRouteContext = Pick<MfeSlotPageContext, "route">;
@@ -125,7 +125,8 @@ export function MfeSlot({ src, pageContext, ssrHtml, ssrData }: MfeSlotProps): R
 	const { route, mountPath, isHydration = false } = pageContext;
 	const wrapperRef = useRef<HTMLDivElement>(null);
 	const hasMountedRef = useRef(false);
-	const htmlContent = useMemo(() => ({ __html: ssrHtml ?? "" }), [ssrHtml]);
+	const initialSsrHtmlRef = useRef(ssrHtml ?? "");
+	const htmlContent = useMemo(() => ({ __html: initialSsrHtmlRef.current }), []);
 	const resolvedMountPath = useMemo(() => mountPath ?? inferMountPath(route), [mountPath, route]);
 	const mfeRoute = useMemo(() => toMfeRoute(route, resolvedMountPath), [route, resolvedMountPath]);
 
@@ -153,7 +154,6 @@ export function MfeSlot({ src, pageContext, ssrHtml, ssrData }: MfeSlotProps): R
 			const detail = (e as CustomEvent<string>).detail;
 			if (typeof detail === "string" && detail !== globalThis.location.pathname) {
 				globalThis.history.pushState(null, "", detail);
-				globalThis.dispatchEvent(new PopStateEvent("popstate"));
 			}
 		};
 		wrapper.addEventListener("mfe:navigate", onMfeNavigate);
@@ -185,16 +185,12 @@ export function MfeSlot({ src, pageContext, ssrHtml, ssrData }: MfeSlotProps): R
 		// oxlint-disable-next-line react-hooks/exhaustive-deps -- mount effect runs once
 	}, [src, ssrData, ssrHtml, isHydration, mfeRoute, resolvedMountPath]);
 
-	if (ssrHtml && (globalThis.window === undefined || isHydration)) {
-		return (
-			<div
-				ref={wrapperRef}
-				// oxlint-disable-next-line react/no-danger -- intentional: MFE SSR fragment HTML
-				dangerouslySetInnerHTML={htmlContent}
-				suppressHydrationWarning
-			/>
-		);
-	}
-
-	return <div ref={wrapperRef} />;
+	return (
+		<div
+			ref={wrapperRef}
+			// oxlint-disable-next-line react/no-danger -- intentional: MFE SSR fragment HTML snapshot
+			dangerouslySetInnerHTML={htmlContent}
+			suppressHydrationWarning
+		/>
+	);
 }

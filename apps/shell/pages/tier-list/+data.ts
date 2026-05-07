@@ -8,10 +8,10 @@ export type TierListData = MfeShellPageData;
 
 export async function data(pageContext: PageContextServer): Promise<TierListData> {
 	const pathname = pageContext.urlPathname;
-	const { html: mfeHtml, data: mfeData } = await fetchMfeFragmentForPathname(MFE_TIER_LIST_URL, pathname);
+	const { html, transferState } = await fetchMfeFragmentForPathname(MFE_TIER_LIST_URL, pathname);
 	return {
-		mfeHtml,
-		mfeData,
+		html,
+		transferState,
 		mfeSrc: MFE_TIER_LIST_URL,
 		pageContext: { route: pageContext.urlPathname },
 	};

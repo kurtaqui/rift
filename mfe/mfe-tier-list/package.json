@@ -24,6 +24,7 @@
     "@rift/data-access": "workspace:^",
     "@rift/mfe-fragment": "workspace:^",
     "@rift/ui": "workspace:^",
+    "@tanstack/react-query": "catalog:",
     "@vikejs/hono": "catalog:",
     "dotenv": "catalog:",
     "hono": "catalog:",

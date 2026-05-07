@@ -91,6 +91,12 @@
       "skillPath": "plugins/tailwind-v4-shadcn/skills/tailwind-v4-shadcn/SKILL.md",
       "computedHash": "40e8bf715ad567aaf6d9c6aceeafe77fa6e89209b4a59de1cb61cd211351c226"
     },
+    "tanstack-query-best-practices": {
+      "source": "deckardger/tanstack-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tanstack-query/SKILL.md",
+      "computedHash": "21d2e8b7468a81d772b6527ad8ca178cc2f3f08af777bb9061333013ee88a0c9"
+    },
     "type-fest": {
       "source": "izidorome/skills",
       "sourceType": "github",

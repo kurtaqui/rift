@@ -1,30 +1,19 @@
 "use client";
 
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
-import { useData } from "vike-react/useData";
 
 import { tierAtom, roleAtom, patchAtom } from "../../tier-list/tier-list.atoms";
 import { TierListFilters } from "../../tier-list/TierListFilters";
 import { TierRow } from "../../tier-list/TierRow";
-import type { Data } from "./data";
+import { tierListQueryOptions } from "./data";
 
 const TIER_ORDER = ["S", "A", "B", "C", "D"] as const;
 const EMPTY_ENTRIES: never[] = [];
 
-export default function Page({ data: dataProp }: { data?: unknown }) {
-	const hookData = useData<Data>();
-	// dataProp is typed `unknown` at the MFE boundary. If it's a non-null object,
-	// treat it as the expected Data shape (passed from App.tsx or MfeSlot).
-	const resolved: Data =
-		dataProp !== undefined && dataProp !== null && typeof dataProp === "object"
-			? // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- object-guard above makes this safe
-				(dataProp as unknown as Data)
-			: hookData; // Guard: fragment server unreachable and no Vike context (e.g. devLoader without data).
-	// todo: return 404
-	if (!resolved) {
-		return null;
-	}
+export default function Page() {
+	const { data: resolved } = useSuspenseQuery(tierListQueryOptions());
 	const { entries, patches } = resolved;
 
 	const tierFilter = useAtomValue(tierAtom);
