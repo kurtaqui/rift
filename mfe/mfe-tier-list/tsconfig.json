@@ -17,5 +17,6 @@
       "@rift/data-access": ["../../libs/data-access/src/index.ts"]
     }
   },
+  "include": ["src"],
   "exclude": ["node_modules", "dist", ".vike"]
 }

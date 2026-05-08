@@ -506,6 +506,9 @@ importers:
         specifier: 'catalog:'
         version: 0.6.21(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vike@0.4.257(hono@4.12.15)(react-streaming@0.4.17(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(srvx@0.11.15)(vite@8.0.10(@types/node@22.19.17)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.0)))
     devDependencies:
+      '@stencil/ssr':
+        specifier: 'catalog:'
+        version: 0.3.1(next@15.5.15(@babel/core@7.29.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(vite@8.0.10(@types/node@22.19.17)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.0))(webpack@5.106.2(esbuild@0.27.7))
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.17
@@ -601,6 +604,9 @@ importers:
         specifier: 'catalog:'
         version: 0.6.21(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vike@0.4.257(hono@4.12.15)(react-streaming@0.4.17(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(srvx@0.11.15)(vite@8.0.10(@types/node@22.19.17)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.0)))
     devDependencies:
+      '@stencil/ssr':
+        specifier: 'catalog:'
+        version: 0.3.1(next@15.5.15(@babel/core@7.29.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(vite@8.0.10(@types/node@22.19.17)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.2)(tsx@4.21.0)(yaml@2.8.0))(webpack@5.106.2(esbuild@0.27.7))
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.17

@@ -30,6 +30,10 @@
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.js"
     },
+    "./dist/components/*.js": {
+      "types": "./dist/components/*.d.ts",
+      "import": "./dist/components/*.js"
+    },
     "./dist/components/*": {
       "types": "./dist/components/*.d.ts",
       "import": "./dist/components/*.js"

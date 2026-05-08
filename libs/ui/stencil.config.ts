@@ -1,4 +1,4 @@
-import { Config } from "@stencil/core";
+import type { Config } from "@stencil/core";
 import { reactOutputTarget } from "@stencil/react-output-target";
 
 export const config: Config = {
@@ -6,16 +6,17 @@ export const config: Config = {
 	outputTargets: [
 		reactOutputTarget({
 			outDir: "src/react",
-			// Tell the React wrapper how to reach the SSR hydrate module so the
-			// generated wrappers serialise declarative shadow DOM during SSR
-			// (instead of eagerly invoking `customElements.define` on the
-			// server, which would crash). The shell wires the same module into
-			// its `+onRenderHtml.ts` to post-process the rendered HTML.
+			// `hydrateModule` — Node-side hydrate script used by `@stencil/ssr`
+			// Vite plugin and by the generated `components.server.ts` wrappers
+			// to serialise Declarative Shadow DOM during SSR.
 			//
-			// `clientModule` is the browser-side custom-elements bundle the
-			// React wrappers import to register lazily on hydration; required
-			// alongside `hydrateModule`.
-			clientModule: "@rift/ui/dist/components",
+			// `clientModule` must be the React wrapper (not the raw element
+			// class) so that `components.server.ts`'s `clientModule` field
+			// references the same React component that CSR hydration uses.
+			// `@rift/ui/react` has no `node` export condition, so Node.js
+			// resolves it to `components.ts` (the client wrapper) avoiding
+			// a circular import.
+			clientModule: "@rift/ui/react",
 			hydrateModule: "@rift/ui/hydrate",
 		}),
 		{

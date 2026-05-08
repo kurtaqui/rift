@@ -14,6 +14,10 @@ export default defineConfig({
 	plugins: [react()],
 	resolve: {
 		alias: [
+			{
+				find: "@rift/ui/react",
+				replacement: path.resolve(__dirname, "../../libs/ui/src/react/components.ts"),
+			},
 			{ find: "@rift/ui/dist/components", replacement: path.resolve(__dirname, "../../libs/ui/dist/components") },
 			{ find: /^@rift\/ui$/, replacement: path.resolve(__dirname, "../../libs/ui/src/index.ts") },
 			{ find: "@rift/champion", replacement: path.resolve(__dirname, "../../libs/champion/src/index.ts") },
