@@ -3,7 +3,6 @@ import { Writable } from "node:stream";
 import { renderToPipeableStream } from "react-dom/server";
 
 import App from "./App";
-import { championsListQueryOptions } from "./pages/champions-list/data";
 
 export type FragmentResult = {
 	html: string;
