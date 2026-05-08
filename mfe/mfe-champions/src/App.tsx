@@ -33,7 +33,7 @@ function ShellRouteSync({ basePath = "", mfeOrigin }: { basePath?: string; mfeOr
 		const emit = (globalThis as Record<string, unknown>)[`__mfe_emit_navigate__${mfeOrigin}`];
 
 		if (typeof emit === "function") {
-			(emit as (route: string) => void)(nextPath);
+			Reflect.apply(emit, null, [nextPath]);
 		}
 	}, [basePath, location.pathname, mfeOrigin]);
 

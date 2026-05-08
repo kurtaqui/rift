@@ -7,9 +7,43 @@ import type { Server } from "vike/types";
 
 import { renderFragment } from "./src/fragment-renderer";
 
-const __dirname = import.meta.dirname;
+/**
+ * Parse the CORS_ORIGINS env var (comma-separated list of allowed origins).
+ * Each entry may contain `*` as a wildcard that matches any sequence of non-slash
+ * characters within the origin, e.g.:
+ *   - `http://localhost:*`  → any localhost port
+ *   - `http://*.example.local` → any subdomain of example.local
+ *   - `https://shell.example.com` → exact match
+ */
+const corsPatterns = (process.env["CORS_ORIGINS"] ?? "")
+	.split(",")
+	.map(s => s.trim())
+	.filter(Boolean)
+	.map(
+		pattern => new RegExp(`^${pattern.replaceAll(/[.+^${}()|[\\]\\\\]/g, String.raw`\$&`).replaceAll("*", "[^/]*")}$`),
+	);
+
+function isCorsAllowed(origin: string): boolean {
+	return corsPatterns.some(re => re.test(origin));
+}
 
 const app = new Hono();
+
+// Set CORS headers BEFORE calling next() so they are included when c.body()
+// creates the Response (Response headers are immutable once constructed).
+app.use("*", async (c, next) => {
+	const origin = c.req.header("Origin") ?? "";
+	if (isCorsAllowed(origin)) {
+		c.header("Access-Control-Allow-Origin", origin);
+		c.header("Vary", "Origin");
+	}
+	if (c.req.method === "OPTIONS") {
+		c.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+		c.header("Access-Control-Max-Age", "600");
+		return c.body(null, 204);
+	}
+	return next();
+});
 
 /**
  * GET /fragment?route=<mfe-relative-path>
@@ -30,13 +64,10 @@ const app = new Hono();
  */
 app.get("/mfe.js", async c => {
 	try {
-		const content = await readFile(join(__dirname, "dist/client/mfe.js"), "utf8");
-		return new Response(content, {
-			headers: {
-				"Content-Type": "application/javascript",
-				"Cache-Control": "no-cache",
-			},
-		});
+		const content = await readFile(join(process.cwd(), "dist/mfe-bundle/mfe.js"), "utf8");
+		c.header("Content-Type", "application/javascript");
+		c.header("Cache-Control", "no-cache");
+		return c.body(content);
 	} catch {
 		return c.text("mfe.js not built — run build:client", 404);
 	}

@@ -51,10 +51,10 @@ Object.assign(globalThis, {
 			QueryClientProvider,
 			{ client: queryClient },
 			createElement(App, {
-				basePath: props.mountPath,
+				...(props.mountPath !== undefined && { basePath: props.mountPath }),
 				mfeOrigin: origin,
-				route: props.route,
-			} as React.ComponentProps<typeof App>),
+				...(props.route !== undefined && { route: props.route }),
+			}),
 		);
 
 		if (props.ssrHtml && props.isHydration) {

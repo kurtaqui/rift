@@ -38,10 +38,8 @@ Object.assign(globalThis, {
 			QueryClientProvider,
 			{ client: queryClient },
 			createElement(App, {
-				basePath: props.mountPath,
-				mfeOrigin: origin,
-				route: props.route,
-			} as React.ComponentProps<typeof App>),
+				...(props.mountPath !== undefined && { basePath: props.mountPath }),
+			}),
 		);
 		const existingRoot = ROOTS.get(container);
 		if (existingRoot) {

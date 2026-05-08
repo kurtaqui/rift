@@ -35,10 +35,10 @@ export default defineConfig({
 			formats: ["es"],
 			fileName: () => "mfe.js",
 		},
-		outDir: "dist/client",
+		outDir: "dist/mfe-bundle",
 		emptyOutDir: false,
 		// Do not externalise React — this is a self-contained bundle.
-		rollupOptions: {
+		rolldownOptions: {
 			external: [],
 		},
 	},

@@ -27,7 +27,7 @@
         "command": "pnpm build:client",
         "cwd": "mfe/mfe-champions"
       },
-      "outputs": ["{projectRoot}/dist/client"],
+      "outputs": ["{projectRoot}/dist/mfe-bundle"],
       "dependsOn": ["^build"]
     },
     "dev:client": {
@@ -46,7 +46,7 @@
         "command": "pnpm preview",
         "cwd": "mfe/mfe-champions"
       },
-      "dependsOn": ["build"]
+      "dependsOn": ["build", "build:client"]
     },
     "lint": {
       "executor": "nx:run-commands",

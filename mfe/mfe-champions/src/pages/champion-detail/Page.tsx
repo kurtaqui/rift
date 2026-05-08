@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
-import { championDetailQueryOptions } from "./data";
+import { championDetailQueryOptions } from "./query-options";
 
 const SLOT_ORDER = ["P", "Q", "W", "E", "R"] as const;
 

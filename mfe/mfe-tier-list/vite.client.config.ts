@@ -27,9 +27,9 @@ export default defineConfig({
 			formats: ["es"],
 			fileName: () => "mfe.js",
 		},
-		outDir: "dist/client",
+		outDir: "dist/mfe-bundle",
 		emptyOutDir: false,
-		rollupOptions: {
+		rolldownOptions: {
 			external: [],
 		},
 	},
